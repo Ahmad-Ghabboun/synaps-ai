@@ -1,0 +1,4 @@
+project_id = "hushfedsqcxipzjcvcre"
+
+[functions.synaps-ai]
+verify_jwt = false

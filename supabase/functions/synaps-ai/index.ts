@@ -38,7 +38,15 @@ You MUST output STRICTLY in JSON format with NO markdown formatting, NO backtick
 {"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which SQAP section>", "impact": "<business impact>"}]}
 Return ONLY valid JSON.`;
 
-const OPTIMIZER_PROMPT = `You are a Security Architect. Fix the following security or technical flaw using industry best practices including PCI-DSS, OAuth 2.0, encryption standards (AES-256), tokenization, and secure third-party integrations. Output the corrected section content in Markdown format (without the ## heading) that can replace the flawed section in the original document. Include specific implementation details and security standards used.`;
+const OPTIMIZER_PROMPT = `You are a Security Architect. You will receive a complete SQAP document and a specific flaw to fix.
+
+CRITICAL RULES:
+1. You MUST output the ENTIRE SQAP document with the fix merged into the relevant section.
+2. NEVER remove, omit, or shorten any existing sections, headings, or content.
+3. Treat the current SQAP as a base document. Append or intelligently merge new technical requirements under the appropriate ## headers.
+4. Use industry best practices including PCI-DSS, OAuth 2.0, encryption standards (AES-256), tokenization, and secure third-party integrations.
+5. Include specific implementation details and security standards used in your fix.
+6. Output the full corrected SQAP in Markdown format, preserving all ## section headers exactly as they appear.`;
 
 function mergeAuditResults(tech: any, business: any): any {
   const avgScore = Math.round((tech.qualityScore + business.qualityScore) / 2);

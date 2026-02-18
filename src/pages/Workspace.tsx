@@ -223,6 +223,7 @@ export default function Workspace() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputText, setInputText] = useState("");
   const [activeTab, setActiveTab] = useState("status");
+  const [sqapContent, setSqapContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Determine pipeline step
@@ -238,11 +239,15 @@ export default function Workspace() {
     }
   }, [currentProject, navigate]);
 
+  // File-driven re-render: watch project.files and extract SQAP.md content
+  useEffect(() => {
+    if (!currentProject) return;
+    const sqapFile = currentProject.files?.find((f) => f.name === "SQAP.md");
+    setSqapContent(sqapFile?.content || currentProject.sqap || "");
+  }, [currentProject?.files, currentProject?.sqap]);
+
   if (!currentProject) return null;
 
-  // Read SQAP from files array first, fallback to sqap field
-  const sqapFile = currentProject.files?.find((f) => f.name === "SQAP.md");
-  const sqapContent = sqapFile?.content || currentProject.sqap;
   const sections = parseSqapSections(sqapContent);
 
   // Read audit from files array
@@ -402,25 +407,26 @@ export default function Workspace() {
     dispatch({ type: "SET_LOADING", loading: { optimizer: true } });
     try {
       const fixData = await callSkill("optimizer", {
-        sqap: sqapContent,
+        sqap: currentProject.sqap,
         section: risk.section,
         title: risk.title,
         description: risk.description,
       });
-      const fixedSection = fixData.result;
-
-      const updatedSqap = replaceSectionInSQAP(currentProject.sqap, risk.section, fixedSection);
-      updateCurrentProject({ sqap: updatedSqap });
+      // Optimizer now returns the ENTIRE merged SQAP document
+      const mergedSqap = fixData.result;
+      const mergedFiles = buildFiles(mergedSqap, currentProject.auditResult);
+      updateCurrentProject({ sqap: mergedSqap, files: mergedFiles });
       toast.success(`Fixed: ${risk.title}`);
 
-      // Re-run audit
+      // Re-run audit on the merged SQAP
       dispatch({ type: "SET_LOADING", loading: { optimizer: false, auditor: true } });
       const persona = currentProject?.persona || "TPM";
       const deadline = currentProject?.deadline || "";
-      const auditData = await callSkill("auditor", { sqap: updatedSqap, persona, deadline });
+      const auditData = await callSkill("auditor", { sqap: mergedSqap, persona, deadline });
       const auditResult = auditData.result;
-      const allFiles = buildFiles(updatedSqap, auditResult);
+      const allFiles = buildFiles(mergedSqap, auditResult);
       updateCurrentProject({
+        sqap: mergedSqap,
         auditResult,
         score: auditResult.qualityScore,
         grade: auditResult.grade,
@@ -434,30 +440,8 @@ export default function Workspace() {
     }
   }
 
-  function replaceSectionInSQAP(sqap: string, sectionName: string, newContent: string): string {
-    const lines = sqap.split("\n");
-    const result: string[] = [];
-    let inSection = false;
-    let replaced = false;
 
-    for (const line of lines) {
-      if (line.startsWith("## ") && line.includes(sectionName)) {
-        inSection = true;
-        replaced = true;
-        result.push(line);
-        result.push(newContent);
-        continue;
-      }
-      if (inSection && line.startsWith("## ")) {
-        inSection = false;
-      }
-      if (!inSection) {
-        result.push(line);
-      }
-    }
-    if (!replaced) return sqap + "\n\n" + newContent;
-    return result.join("\n");
-  }
+
 
   function handleCopySection(content: string) {
     navigator.clipboard.writeText(content);

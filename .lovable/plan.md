@@ -1,78 +1,111 @@
-# SYNAPS — Project Quality Assurance Intelligence
 
-## Overview
 
-A responsive SPA with two main views: a **Project Gallery** for managing projects, and an **Intelligence Workspace** where three AI skills (Architect → Auditor → Optimizer) process project descriptions into structured quality assurance documents, audit scores, and auto-fixes.
+# SYNAPS v2 -- Self-Contained Intelligence Platform
+
+## Summary of Changes
+
+This upgrade transforms SYNAPS from a basic two-view app into a persona-aware, file-first intelligence platform with a tabbed Mission Control, a Project Setup Modal, and a non-floating input dock.
 
 ---
 
-## View 1: Project Gallery (Landing Page)
+## 1. Project Setup Modal
 
-- **"High-Contrast Studio" design** — warm white background (#f8f7f3), Inter font, clean bordered cards with subtle shadows
-- **Hero "Create New Project" card** — dashed border, large blue plus icon, hover animation, navigates to Workspace
-- **Recent Projects grid** (responsive 1/2/3 columns) — each card shows title, "Last updated" timestamp, color-coded progress bar (red/amber/blue/green by score), and large percentage display
-- **Card context menu** — "More" icon with Rename (inline edit) and Delete (confirmation toast) options
-- Clicking a project card opens it in the Workspace
+**Trigger:** Clicking "Create New Project" on the Gallery page opens a modal instead of immediately navigating to the Workspace.
 
-## View 2: Intelligence Workspace
+**Modal fields:**
+- Project Name (text input)
+- Persona (select: TPM, Analyst, Entrepreneur)
+- Deadline (date picker using existing Calendar/Popover components)
+- Description (multi-line textarea)
 
-### Top Navigation Bar
+**Data model change:** Add `persona` and `deadline` fields to the `Project` type in `src/types/synaps.ts`. These fields are saved to localStorage and passed to all AI skill calls so prompts are parameterized per persona.
 
-- SYNAPS logo + "THE WORKSPACE" label, settings/help icons, user avatar placeholder
+**Edge function update:** The `synaps-ai` edge function Architect prompt will include persona context (e.g., "The user is a Technical PM -- emphasize timeline risks and stakeholder communication") and deadline awareness.
 
-### Left Panel — "The Artifact"
+---
 
-- Displays the generated SQAP document as an **accordion list** — each Markdown section (Executive Summary, Tech Stack, Security, etc.) is collapsible
-- **Copy icon** on each section, **"Download Assets"** button to export as .md or .json
-- Loading/empty states with placeholder text
+## 2. Right Panel -- Tabbed Mission Control
 
-### Right Panel — "Mission Control"
+Replace the current single scrollable right panel with a **4-tab system** using the existing `Tabs` component:
 
-- **Pipeline Stepper** — vertical progress indicator for Skill 1 → Skill 2 → Skill 3 with active pulse and checkmark icons
-- **Circular SVG Gauge** — animates from 0 to the quality score, shows percentage + grade letter + "Completeness Score" label
-- **Project Assets grid** (2×2) — file icons for SQAP.md, Audit.json, Metrics.csv, Report.pdf
-- **"RUN DUAL AUDIT" button** — triggers Skill 2, with loading/disabled state
-- **Gap Feed** — scrollable list of risk cards:
-  - **Critical** (red-tinted, red left border, "CRITICAL" badge) with "FIX ISSUE" button
-  - **Moderate** (amber-tinted, amber left border, "MODERATE" badge) with "FIX ISSUE" button
-  - Each fix triggers Skill 3, then auto-reruns Skill 2 to refresh the score
+| Tab | Contents |
+|-----|----------|
+| **Status** | Vertical Pipeline Stepper with live pulse animations (existing component, moved here) |
+| **Audit** | Circular SVG Gauge, Grade display, Model Consensus metrics, Raw JSON toggle |
+| **Gap Feed** | Risk cards with FIX ISSUE buttons and confidence badges |
+| **Assets** | 2x2 virtual file grid (SQAP.md, Audit.json, Metrics.csv, Report.pdf) with Download Assets button |
 
-### Floating Input Area
+When "LAUNCH ENGINE" is clicked, auto-focus the **Status** tab to show the pipeline progressing in real time.
 
-- Centered floating card at bottom of workspace
-- Multi-line textarea with placeholder prompt
-- Paperclip icon for file uploads (UI only)
-- **"LAUNCH ENGINE"** button triggers Skill 1 → Skill 2 pipeline
-- Keyboard shortcut: Cmd/Ctrl + Enter
+---
 
-## Three AI Skills (via Lovable AI — Gemini model, routed through secure edge function)
+## 3. Fixed Input Dock (Non-Floating)
 
-1. **The Architect** — Takes project description → outputs structured Markdown SQAP
-2. **The Auditor** — Takes SQAP → outputs JSON with quality score (0-100), grade (A-F), and categorized risks
-3. **The Optimizer** — Takes a flawed section + risk details → outputs corrected Markdown; auto-reruns audit to update score
+Replace the current floating/fixed-position input area with a **static full-width bar** pinned at the bottom of the workspace layout using flexbox (not `position: fixed`). This improves mobile responsiveness by not overlapping content.
 
-## State & Persistence
+The dock contains:
+- Paperclip icon (UI only)
+- Multi-line textarea
+- "LAUNCH ENGINE" button
+- Cmd/Ctrl+Enter shortcut hint
 
-- React Context for global state (current project, projects list, loading states)
-- localStorage persistence for all projects and metadata
-- Auto-save every 30 seconds
+---
+
+## 4. File-First Architecture
+
+Every AI skill generates an internal "file object" stored on the project:
+
+- **Skill 1 (Architect):** Generates 3 Markdown documents (stored as a single SQAP string with clear section headers) -- persona-aware content
+- **Skill 2 (Auditor):** Generates `audit.json` (the audit result) and a `metrics.csv` (score breakdown by section)
+- **Skill 3 (Optimizer):** Rewrites flawed MD sections, auto-refreshes audit
+
+**New project fields:** `files` array on the Project type holding `{name, type, content}` objects.
+
+The Accordion, Gauge, and Gap Feed all "read" from these internal file objects rather than raw state fields.
+
+**Download Assets:** A button that bundles all generated files into a ZIP download (using JSZip or manual Blob construction). Each file includes the Project Name and Deadline in its header.
+
+---
+
+## 5. AI Skill Updates
+
+**Skill 1 (Architect):** Updated system prompt includes persona detection and generates 3 professional Markdown sections tailored to the user's role. Deadline is mentioned in the Executive Summary.
+
+**Skill 2 (Dual Auditor):** Runs two "personas" (Technical Risk vs. Business Risk) sequentially via the edge function. Results are cross-validated and merged. Duplicate risks are consolidated into "High Confidence" cards via keyword matching (existing merge logic enhanced). Outputs both JSON and a CSV metrics breakdown.
+
+**Skill 3 (Optimizer):** No major changes -- rewrites flawed sections and auto-triggers Skill 2 re-run.
+
+---
 
 ## Technical Details
 
-- React Router for navigation (/, /workspace, /settings)
-- Settings modal for any configuration
-- Comprehensive error handling with retry buttons, toast notifications
-- Loading states with spinners on all async operations
-- Smooth animations: gauge fill, card hover effects, page transitions, accordion expand/collapse
+### Files to modify:
 
-## Responsive Design
+1. **`src/types/synaps.ts`** -- Add `persona`, `deadline`, and `files` fields to `Project` interface. Add `FileObject` type.
 
-- Mobile: single column, full-width cards, larger touch targets
-- Tablet: 2-column grid maintained
-- Desktop: full 50/50 split workspace  
-  
-The plan is excellent. Please add these final requirements to the build:
-  1. **Dual Audit Merge Logic:** Automatically merge duplicate risks from the two models into 'High Confidence' cards using keyword matching.
-  2. **Demo Mode:** Include a toggle in Settings to use 'Sample Project Data' for the Fintech example to bypass API calls for demonstration.
-  3. **Technical View:** Add a small toggle to show the 'Raw JSON' output from the auditors in the Mission Control panel.
-  4. **Branded Export:** Ensure the .md download includes a professional header with the project title and the final consensus score.
+2. **`src/context/AppContext.tsx`** -- No structural changes needed; existing reducer handles project updates.
+
+3. **`src/pages/ProjectGallery.tsx`** -- Replace direct navigation with a Project Setup Modal (Dialog with form fields including date picker).
+
+4. **`src/pages/Workspace.tsx`** -- Major refactor:
+   - Wrap right panel content in `Tabs` / `TabsList` / `TabsContent` components
+   - Move Pipeline Stepper to "Status" tab
+   - Move Gauge + Raw JSON to "Audit" tab
+   - Move Risk cards to "Gap Feed" tab
+   - Move Assets grid + Download button to "Assets" tab
+   - Replace fixed-position input dock with a flexbox-pinned bottom bar
+   - Add auto-tab-switch logic on engine launch
+   - Update `launchEngine` and skill calls to pass persona/deadline
+   - Generate file objects from skill outputs
+
+5. **`supabase/functions/synaps-ai/index.ts`** -- Update Architect prompt to accept and use persona + deadline parameters. Add CSV generation logic to Auditor response processing.
+
+6. **`src/components/SettingsDialog.tsx`** -- No changes needed (Demo Mode and Technical View toggles remain).
+
+### New dependency:
+- None required. ZIP download can be implemented with native Blob API (creating a simple multi-file download) or basic concatenation. If full ZIP is needed, `jszip` would be added.
+
+### Responsive behavior:
+- Mobile: Tabs stack naturally, input dock is full-width at bottom
+- Desktop: 50/50 split with tabbed right panel
+

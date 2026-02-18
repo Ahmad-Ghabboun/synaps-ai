@@ -15,7 +15,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { Risk, DEMO_PROJECT } from "@/types/synaps";
+import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
 import { toast } from "sonner";
 import {
   Accordion,
@@ -23,6 +23,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -88,7 +89,7 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   const offset = circumference - (animatedScore / 100) * circumference;
 
   return (
-    <div className="flex flex-col items-center mb-8">
+    <div className="flex flex-col items-center">
       <div className="relative w-[200px] h-[200px]">
         <svg width="200" height="200" viewBox="0 0 200 200" className="-rotate-90">
           <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
@@ -109,11 +110,11 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
       <div className="flex items-center gap-4 mt-4">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-success" />
-          <span className="text-sm text-muted-foreground">Gemini: Active</span>
+          <span className="text-sm text-muted-foreground">Technical: Active</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-success" />
-          <span className="text-sm text-muted-foreground">ChatGPT: Active</span>
+          <span className="text-sm text-muted-foreground">Business: Active</span>
         </div>
       </div>
     </div>
@@ -124,12 +125,12 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
 function PipelineStepper({ activeStep }: { activeStep: number }) {
   const steps = [
     { label: "Skill 1: Extraction", desc: "The Architect" },
-    { label: "Skill 2: Audit", desc: "The Auditor" },
+    { label: "Skill 2: Computation", desc: "The Dual Auditor" },
     { label: "Skill 3: Optimization", desc: "The Optimizer" },
   ];
 
   return (
-    <div className="flex flex-col gap-1 mb-6">
+    <div className="flex flex-col gap-1">
       {steps.map((step, i) => (
         <div key={i} className="flex items-center gap-3 py-2">
           <div className={`relative w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
@@ -195,10 +196,25 @@ function RiskCard({ risk, onFix }: { risk: Risk; onFix: (risk: Risk) => void }) 
         ) : (
           <Sparkles className="h-4 w-4" />
         )}
-        {risk.isFixing ? "Fixing..." : "Auto-Fix Section"}
+        {risk.isFixing ? "Fixing..." : "FIX ISSUE"}
       </button>
     </div>
   );
+}
+
+// Generate CSV from audit result
+function generateMetricsCsv(auditResult: any, projectName: string): string {
+  const rows = [
+    ["Metric", "Value"],
+    ["Project", projectName],
+    ["Quality Score", String(auditResult.qualityScore)],
+    ["Grade", auditResult.grade],
+    ["Critical Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "critical").length)],
+    ["Moderate Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "moderate").length)],
+    ["Total Risks", String(auditResult.risks.length)],
+    ...auditResult.risks.map((r: Risk, i: number) => [`Risk ${i + 1}: ${r.title}`, `${r.severity} — ${r.section}`]),
+  ];
+  return rows.map((r) => r.join(",")).join("\n");
 }
 
 export default function Workspace() {
@@ -206,6 +222,7 @@ export default function Workspace() {
   const { state, dispatch, currentProject, updateCurrentProject } = useApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputText, setInputText] = useState("");
+  const [activeTab, setActiveTab] = useState("status");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // Determine pipeline step
@@ -223,7 +240,15 @@ export default function Workspace() {
 
   if (!currentProject) return null;
 
-  const sections = parseSqapSections(currentProject.sqap);
+  // Read SQAP from files array first, fallback to sqap field
+  const sqapFile = currentProject.files?.find((f) => f.name === "SQAP.md");
+  const sqapContent = sqapFile?.content || currentProject.sqap;
+  const sections = parseSqapSections(sqapContent);
+
+  // Read audit from files array
+  const auditFile = currentProject.files?.find((f) => f.name === "Audit.json");
+  const auditFromFile = auditFile ? JSON.parse(auditFile.content) : null;
+  const activeAudit = auditFromFile || currentProject.auditResult;
 
   async function callSkill(skill: string, payload: Record<string, string>) {
     const { data, error } = await supabase.functions.invoke("synaps-ai", {
@@ -231,6 +256,19 @@ export default function Workspace() {
     });
     if (error) throw error;
     return data;
+  }
+
+  function buildFiles(sqap: string, auditResult?: any): FileObject[] {
+    const files: FileObject[] = [];
+    if (sqap) {
+      const header = `# ${currentProject!.name}\n${currentProject!.persona ? `**Persona:** ${currentProject!.persona}` : ""}\n${currentProject!.deadline ? `**Deadline:** ${new Date(currentProject!.deadline).toLocaleDateString()}` : ""}\n\n---\n\n`;
+      files.push({ name: "SQAP.md", type: "md", content: header + sqap });
+    }
+    if (auditResult) {
+      files.push({ name: "Audit.json", type: "json", content: JSON.stringify(auditResult, null, 2) });
+      files.push({ name: "Metrics.csv", type: "csv", content: generateMetricsCsv(auditResult, currentProject!.name) });
+    }
+    return files;
   }
 
   // Skill 1 + 2 pipeline
@@ -242,14 +280,17 @@ export default function Workspace() {
 
     const description = inputText.trim() || currentProject?.description || "";
     updateCurrentProject({ description });
+    setActiveTab("status");
 
     // Demo mode shortcut
     if (state.demoMode) {
+      const files = buildFiles(DEMO_PROJECT.sqap, DEMO_PROJECT.auditResult);
       updateCurrentProject({
         sqap: DEMO_PROJECT.sqap,
         auditResult: DEMO_PROJECT.auditResult,
         score: DEMO_PROJECT.score,
         grade: DEMO_PROJECT.grade,
+        files,
       });
       toast.success("Demo data loaded!");
       setInputText("");
@@ -259,22 +300,28 @@ export default function Workspace() {
     // Skill 1: Architect
     dispatch({ type: "SET_LOADING", loading: { architect: true } });
     try {
-      const architectData = await callSkill("architect", { description });
+      const persona = currentProject?.persona || "TPM";
+      const deadline = currentProject?.deadline || "";
+      const architectData = await callSkill("architect", { description, persona, deadline });
       const sqap = architectData.result;
-      updateCurrentProject({ sqap });
+      const files = buildFiles(sqap);
+      updateCurrentProject({ sqap, files });
       toast.success("SQAP generated successfully!");
 
-      // Skill 2: Auditor
+      // Skill 2: Dual Auditor
       dispatch({ type: "SET_LOADING", loading: { architect: false, auditor: true } });
       try {
-        const auditData = await callSkill("auditor", { sqap });
+        const auditData = await callSkill("auditor", { sqap, persona, deadline });
         const auditResult = auditData.result;
+        const allFiles = buildFiles(sqap, auditResult);
         updateCurrentProject({
           auditResult,
           score: auditResult.qualityScore,
           grade: auditResult.grade,
+          files: allFiles,
         });
-        toast.success("Audit complete!");
+        setActiveTab("audit");
+        toast.success("Dual audit complete!");
       } catch (err: any) {
         toast.error("Audit failed: " + (err.message || "Unknown error"));
       }
@@ -288,16 +335,18 @@ export default function Workspace() {
 
   // Skill 2 standalone
   async function runDualAudit() {
-    if (!currentProject?.sqap) {
+    if (!sqapContent) {
       toast.error("Generate a SQAP first");
       return;
     }
 
     if (state.demoMode) {
+      const files = buildFiles(currentProject.sqap, DEMO_PROJECT.auditResult);
       updateCurrentProject({
         auditResult: DEMO_PROJECT.auditResult,
         score: DEMO_PROJECT.score,
         grade: DEMO_PROJECT.grade,
+        files,
       });
       toast.success("Demo audit loaded!");
       return;
@@ -305,12 +354,16 @@ export default function Workspace() {
 
     dispatch({ type: "SET_LOADING", loading: { auditor: true } });
     try {
-      const auditData = await callSkill("auditor", { sqap: currentProject.sqap });
+      const persona = currentProject?.persona || "TPM";
+      const deadline = currentProject?.deadline || "";
+      const auditData = await callSkill("auditor", { sqap: sqapContent, persona, deadline });
       const auditResult = auditData.result;
+      const allFiles = buildFiles(currentProject.sqap, auditResult);
       updateCurrentProject({
         auditResult,
         score: auditResult.qualityScore,
         grade: auditResult.grade,
+        files: allFiles,
       });
       toast.success("Audit complete!");
     } catch (err: any) {
@@ -322,29 +375,26 @@ export default function Workspace() {
 
   // Skill 3: Auto-fix
   async function handleFix(risk: Risk) {
-    if (!currentProject?.sqap) return;
+    if (!sqapContent) return;
 
     if (state.demoMode) {
-      // Simulate fix in demo mode
-      const updatedRisks = currentProject.auditResult?.risks.filter((r) => r.id !== risk.id) || [];
+      const updatedRisks = activeAudit?.risks.filter((r: Risk) => r.id !== risk.id) || [];
       const newScore = Math.min(100, currentProject.score + 20);
       const newGrade = newScore >= 90 ? "A" : newScore >= 80 ? "B" : newScore >= 70 ? "C" : newScore >= 60 ? "D" : "F";
+      const newAudit = { ...activeAudit!, qualityScore: newScore, grade: newGrade, risks: updatedRisks };
+      const files = buildFiles(currentProject.sqap, newAudit);
       updateCurrentProject({
-        auditResult: {
-          ...currentProject.auditResult!,
-          qualityScore: newScore,
-          grade: newGrade,
-          risks: updatedRisks,
-        },
+        auditResult: newAudit,
         score: newScore,
         grade: newGrade,
+        files,
       });
       toast.success(`Fixed: ${risk.title}`);
       return;
     }
 
     // Mark risk as fixing
-    const risks = currentProject.auditResult?.risks.map((r) =>
+    const risks = activeAudit?.risks.map((r: Risk) =>
       r.id === risk.id ? { ...r, isFixing: true } : r
     ) || [];
     updateCurrentProject({ auditResult: { ...currentProject.auditResult!, risks } });
@@ -352,26 +402,29 @@ export default function Workspace() {
     dispatch({ type: "SET_LOADING", loading: { optimizer: true } });
     try {
       const fixData = await callSkill("optimizer", {
-        sqap: currentProject.sqap,
+        sqap: sqapContent,
         section: risk.section,
         title: risk.title,
         description: risk.description,
       });
       const fixedSection = fixData.result;
 
-      // Replace section in SQAP
       const updatedSqap = replaceSectionInSQAP(currentProject.sqap, risk.section, fixedSection);
       updateCurrentProject({ sqap: updatedSqap });
       toast.success(`Fixed: ${risk.title}`);
 
       // Re-run audit
       dispatch({ type: "SET_LOADING", loading: { optimizer: false, auditor: true } });
-      const auditData = await callSkill("auditor", { sqap: updatedSqap });
+      const persona = currentProject?.persona || "TPM";
+      const deadline = currentProject?.deadline || "";
+      const auditData = await callSkill("auditor", { sqap: updatedSqap, persona, deadline });
       const auditResult = auditData.result;
+      const allFiles = buildFiles(updatedSqap, auditResult);
       updateCurrentProject({
         auditResult,
         score: auditResult.qualityScore,
         grade: auditResult.grade,
+        files: allFiles,
       });
       toast.success("Score updated!");
     } catch (err: any) {
@@ -411,21 +464,31 @@ export default function Workspace() {
     toast.success("Copied to clipboard");
   }
 
-  function handleDownload() {
-    if (!currentProject?.sqap) return;
-    const header = `# ${currentProject.name}\n\n**Quality Score:** ${currentProject.score}% (${currentProject.grade})\n**Generated by SYNAPS** — Project Quality Assurance Intelligence\n\n---\n\n`;
-    const content = header + currentProject.sqap;
-    const blob = new Blob([content], { type: "text/markdown" });
+  function handleDownloadFile(file: FileObject) {
+    const mimeMap: Record<string, string> = { md: "text/markdown", json: "application/json", csv: "text/csv", pdf: "application/pdf" };
+    const blob = new Blob([file.content], { type: mimeMap[file.type] || "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${currentProject.name.replace(/\s+/g, "_")}_SQAP.md`;
+    a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Downloaded SQAP.md");
+    toast.success(`Downloaded ${file.name}`);
+  }
+
+  function handleDownloadAll() {
+    const files = currentProject.files || [];
+    if (files.length === 0) {
+      toast.error("No files to download");
+      return;
+    }
+    // Download each file individually (no jszip dependency)
+    files.forEach((f) => handleDownloadFile(f));
   }
 
   const isAnyLoading = state.isLoading.architect || state.isLoading.auditor || state.isLoading.optimizer;
+  const projectFiles = currentProject.files || [];
+  const displayFiles = ["SQAP.md", "Audit.json", "Metrics.csv", "Report.pdf"];
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -438,6 +501,9 @@ export default function Workspace() {
           <span className="text-2xl font-bold text-primary">SYNAPS</span>
           <span className="text-muted-foreground">|</span>
           <span className="text-sm font-medium text-muted-foreground">THE WORKSPACE</span>
+          {currentProject.persona && (
+            <Badge variant="outline" className="ml-2 text-xs">{currentProject.persona}</Badge>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => setSettingsOpen(true)} className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Settings">
@@ -451,13 +517,16 @@ export default function Workspace() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-6 p-6 pb-32 lg:pb-6">
+      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
         {/* Left Panel - The Artifact */}
         <section className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
-            {currentProject.sqap && (
-              <Button variant="outline" size="sm" onClick={handleDownload}>
+            {sqapContent && (
+              <Button variant="outline" size="sm" onClick={() => {
+                const sqapFileObj = projectFiles.find(f => f.name === "SQAP.md");
+                if (sqapFileObj) handleDownloadFile(sqapFileObj);
+              }}>
                 <Download className="h-4 w-4 mr-1" /> Download
               </Button>
             )}
@@ -501,121 +570,154 @@ export default function Workspace() {
           </div>
         </section>
 
-        {/* Right Panel - Mission Control */}
+        {/* Right Panel - Mission Control (Tabbed) */}
         <section className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden">
-          <h2 className="text-2xl font-bold text-foreground mb-6">Mission Control</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-4">Mission Control</h2>
 
-          <div className="flex-1 overflow-y-auto space-y-6">
-            {/* Pipeline Stepper */}
-            <PipelineStepper activeStep={activeStep} />
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
+            <TabsList className="grid w-full grid-cols-4 shrink-0">
+              <TabsTrigger value="status">Status</TabsTrigger>
+              <TabsTrigger value="audit">Audit</TabsTrigger>
+              <TabsTrigger value="gaps">Gap Feed</TabsTrigger>
+              <TabsTrigger value="assets">Assets</TabsTrigger>
+            </TabsList>
 
-            {/* Score Gauge */}
-            <ScoreGauge score={currentProject.score} grade={currentProject.grade} />
-
-            {/* Project Assets */}
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-4">Project Assets</h3>
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                {["SQAP.md", "Audit.json", "Metrics.csv", "Report.pdf"].map((file) => (
-                  <div key={file} className="aspect-square bg-muted/50 hover:bg-muted border border-border rounded-lg flex flex-col items-center justify-center p-4 transition-colors cursor-pointer">
-                    <FileText className="h-8 w-8 text-primary mb-2" />
-                    <span className="text-sm text-muted-foreground text-center">{file}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Raw JSON Toggle */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">Show Raw JSON</span>
-              <Switch
-                checked={state.showRawJson}
-                onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })}
-              />
-            </div>
-
-            {state.showRawJson && currentProject.auditResult?.rawJson && (
-              <pre className="bg-muted/50 border border-border rounded-lg p-4 text-xs overflow-x-auto text-muted-foreground max-h-48">
-                {JSON.stringify(JSON.parse(currentProject.auditResult.rawJson), null, 2)}
-              </pre>
-            )}
-
-            {/* Run Dual Audit */}
-            <Button
-              className="w-full py-4 text-lg font-bold"
-              size="lg"
-              onClick={runDualAudit}
-              disabled={!currentProject.sqap || isAnyLoading}
-            >
-              {state.isLoading.auditor ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  Analyzing Document...
-                </>
-              ) : (
-                "RUN DUAL AUDIT"
-              )}
-            </Button>
-
-            {/* Gap Feed */}
-            <div>
-              <h3 className="text-lg font-semibold text-foreground mb-4">Gap Feed</h3>
-              <div className="max-h-96 overflow-y-auto space-y-3">
-                {currentProject.auditResult?.risks && currentProject.auditResult.risks.length > 0 ? (
-                  currentProject.auditResult.risks.map((risk) => (
-                    <RiskCard key={risk.id} risk={risk} onFix={handleFix} />
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-30" />
-                    <p className="text-sm">No audit results yet.</p>
-                    <p className="text-xs">Click RUN DUAL AUDIT to analyze your project.</p>
+            <div className="flex-1 overflow-y-auto mt-4">
+              {/* Status Tab */}
+              <TabsContent value="status" className="mt-0 space-y-6">
+                <PipelineStepper activeStep={activeStep} />
+                {isAnyLoading && (
+                  <div className="flex items-center gap-2 text-sm text-primary">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    {state.isLoading.architect ? "Running Architect..." : state.isLoading.auditor ? "Running Dual Audit..." : "Running Optimizer..."}
                   </div>
                 )}
-              </div>
+              </TabsContent>
+
+              {/* Audit Tab */}
+              <TabsContent value="audit" className="mt-0 space-y-6">
+                <ScoreGauge score={currentProject.score} grade={currentProject.grade} />
+
+                <Button
+                  className="w-full py-4 text-lg font-bold"
+                  size="lg"
+                  onClick={runDualAudit}
+                  disabled={!sqapContent || isAnyLoading}
+                >
+                  {state.isLoading.auditor ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      Analyzing Document...
+                    </>
+                  ) : (
+                    "RUN DUAL AUDIT"
+                  )}
+                </Button>
+
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-foreground">Show Raw JSON</span>
+                  <Switch
+                    checked={state.showRawJson}
+                    onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })}
+                  />
+                </div>
+
+                {state.showRawJson && activeAudit?.rawJson && (
+                  <pre className="bg-muted/50 border border-border rounded-lg p-4 text-xs overflow-x-auto text-muted-foreground max-h-48">
+                    {JSON.stringify(JSON.parse(activeAudit.rawJson), null, 2)}
+                  </pre>
+                )}
+              </TabsContent>
+
+              {/* Gap Feed Tab */}
+              <TabsContent value="gaps" className="mt-0">
+                <div className="space-y-3">
+                  {activeAudit?.risks && activeAudit.risks.length > 0 ? (
+                    activeAudit.risks.map((risk: Risk) => (
+                      <RiskCard key={risk.id} risk={risk} onFix={handleFix} />
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-30" />
+                      <p className="text-sm">No audit results yet.</p>
+                      <p className="text-xs">Run the Dual Audit to analyze your project.</p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Assets Tab */}
+              <TabsContent value="assets" className="mt-0 space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  {displayFiles.map((fileName) => {
+                    const file = projectFiles.find((f) => f.name === fileName);
+                    const exists = !!file;
+                    return (
+                      <button
+                        key={fileName}
+                        onClick={() => file && handleDownloadFile(file)}
+                        disabled={!exists}
+                        className={`aspect-square border border-border rounded-lg flex flex-col items-center justify-center p-4 transition-colors ${
+                          exists ? "bg-muted/50 hover:bg-muted cursor-pointer" : "bg-muted/20 opacity-50 cursor-not-allowed"
+                        }`}
+                      >
+                        <FileText className={`h-8 w-8 mb-2 ${exists ? "text-primary" : "text-muted-foreground"}`} />
+                        <span className="text-sm text-muted-foreground text-center">{fileName}</span>
+                        {exists && <span className="text-xs text-success mt-1">Ready</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleDownloadAll}
+                  disabled={projectFiles.length === 0}
+                >
+                  <Download className="h-4 w-4 mr-2" /> Download All Assets
+                </Button>
+              </TabsContent>
             </div>
-          </div>
+          </Tabs>
         </section>
       </div>
 
-      {/* Floating Input Area */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 lg:p-6 bg-gradient-to-t from-background via-background to-transparent">
-        <div className="max-w-4xl mx-auto bg-card rounded-xl border border-border shadow-lg p-4">
-          <div className="flex gap-3">
-            <button className="shrink-0 p-2 hover:bg-muted rounded-lg transition-colors self-end" aria-label="Attach file">
-              <Paperclip className="h-5 w-5 text-muted-foreground" />
-            </button>
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                  e.preventDefault();
-                  launchEngine();
-                }
-              }}
-              placeholder="Describe your project in detail... (e.g., 'Build a fintech app that saves credit card data')"
-              className="flex-1 resize-none bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground text-sm min-h-[60px] max-h-[120px]"
-              rows={2}
-            />
-            <Button
-              onClick={launchEngine}
-              disabled={isAnyLoading}
-              className="shrink-0 self-end px-6"
-            >
-              {isAnyLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <Send className="h-4 w-4 mr-1" />
-                  LAUNCH ENGINE
-                </>
-              )}
-            </Button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-2 text-right">⌘/Ctrl + Enter to launch</p>
+      {/* Fixed Input Dock (non-floating) */}
+      <div className="shrink-0 border-t border-border bg-card px-6 py-4">
+        <div className="max-w-full flex gap-3 items-end">
+          <button className="shrink-0 p-2 hover:bg-muted rounded-lg transition-colors" aria-label="Attach file">
+            <Paperclip className="h-5 w-5 text-muted-foreground" />
+          </button>
+          <textarea
+            ref={textareaRef}
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                e.preventDefault();
+                launchEngine();
+              }
+            }}
+            placeholder="Describe your project in detail..."
+            className="flex-1 resize-none bg-transparent border border-input rounded-lg outline-none text-foreground placeholder:text-muted-foreground text-sm min-h-[48px] max-h-[120px] px-3 py-2 focus-visible:ring-2 focus-visible:ring-ring"
+            rows={2}
+          />
+          <Button
+            onClick={launchEngine}
+            disabled={isAnyLoading}
+            className="shrink-0 px-6"
+          >
+            {isAnyLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-1" />
+                LAUNCH ENGINE
+              </>
+            )}
+          </Button>
         </div>
+        <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

@@ -16,14 +16,25 @@ export interface AuditResult {
   rawJson?: string;
 }
 
+export interface FileObject {
+  name: string;
+  type: "md" | "json" | "csv" | "pdf";
+  content: string;
+}
+
+export type Persona = "TPM" | "Analyst" | "Entrepreneur";
+
 export interface Project {
   id: string;
   name: string;
   description: string;
+  persona?: Persona;
+  deadline?: string;
   sqap: string;
   auditResult: AuditResult | null;
   score: number;
   grade: string;
+  files: FileObject[];
   createdAt: string;
   updatedAt: string;
 }
@@ -46,6 +57,8 @@ export const DEMO_PROJECT: Project = {
   id: "demo-fintech",
   name: "Fintech Payment Gateway",
   description: "Build a fintech app that processes credit card payments, stores card data for recurring billing, integrates with Stripe and PayPal, handles PCI-DSS compliance, and provides a merchant dashboard with real-time transaction analytics.",
+  persona: "TPM",
+  deadline: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
   sqap: `## Executive Summary
 The Fintech Payment Gateway is a comprehensive payment processing platform designed to handle credit card transactions, recurring billing, and multi-provider payment integration. The system must meet PCI-DSS Level 1 compliance standards while providing real-time analytics to merchants.
 
@@ -126,6 +139,7 @@ The Fintech Payment Gateway is a comprehensive payment processing platform desig
   },
   score: 5,
   grade: "F",
+  files: [],
   createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
   updatedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
 };
@@ -139,6 +153,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     auditResult: null,
     score: 85,
     grade: "A",
+    files: [],
     createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -150,6 +165,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     auditResult: null,
     score: 68,
     grade: "C",
+    files: [],
     createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -161,6 +177,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     auditResult: null,
     score: 92,
     grade: "A",
+    files: [],
     createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
@@ -172,6 +189,7 @@ export const SAMPLE_PROJECTS: Project[] = [
     auditResult: null,
     score: 45,
     grade: "D",
+    files: [],
     createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
   },

@@ -6,14 +6,111 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const ARCHITECT_PROMPT = `You are a Technical Architect. Your job is to take a raw project description and extract the Tech Stack, Security Goals, and Project Scope. You must output this information as a structured 'Project Quality Assurance Plan' (SQAP) in Markdown format with clear sections starting with ## for: Executive Summary, Technical Architecture, Security Requirements, Implementation Scope, and Risk Considerations. Be thorough, specific, and technically detailed.`;
+const PERSONA_CONTEXT: Record<string, string> = {
+  TPM: "The user is a Technical Project Manager. Emphasize timeline risks, stakeholder communication, dependency management, and delivery milestones.",
+  Analyst: "The user is an Analyst. Emphasize data integrity, methodology rigor, quantitative metrics, and analytical frameworks.",
+  Entrepreneur: "The user is an Entrepreneur. Emphasize market viability, competitive advantage, cost efficiency, and go-to-market strategy.",
+};
 
-const AUDITOR_PROMPT = `Analyze the provided SQAP document. Compute a Quality Score from 0 to 100 based on security best practices and technical feasibility. Identify specific 'Critical' and 'Moderate' risks.
+function buildArchitectPrompt(persona: string, deadline: string): string {
+  const personaCtx = PERSONA_CONTEXT[persona] || PERSONA_CONTEXT.TPM;
+  const deadlineCtx = deadline ? `\nProject Deadline: ${new Date(deadline).toLocaleDateString()}. Factor this deadline into risk assessments and timeline recommendations.` : "";
+  return `You are a Technical Architect creating a Project Quality Assurance Plan (SQAP).
+${personaCtx}${deadlineCtx}
+
+Generate 3 professional Markdown documents combined into one output with clear ## section headers:
+1. Executive Summary (include deadline if provided), Technical Architecture, Security Requirements
+2. Implementation Scope, Risk Considerations
+3. Quality Metrics, Compliance Requirements
+
+Be thorough, specific, and technically detailed. Tailor language and emphasis to the user's persona.`;
+}
+
+const TECH_AUDITOR_PROMPT = `You are a Technical Risk Auditor. Analyze the provided SQAP document from a TECHNICAL perspective.
+Focus on: architecture flaws, security gaps, scalability issues, technical debt, missing specifications.
+You MUST output STRICTLY in JSON format with NO markdown formatting, NO backticks, NO additional text. Use this exact structure:
+{"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which SQAP section>", "impact": "<business impact>"}]}
+Return ONLY valid JSON.`;
+
+const BUSINESS_AUDITOR_PROMPT = `You are a Business Risk Auditor. Analyze the provided SQAP document from a BUSINESS perspective.
+Focus on: market risks, regulatory compliance, cost overruns, stakeholder impact, competitive threats.
 You MUST output STRICTLY in JSON format with NO markdown formatting, NO backticks, NO additional text. Use this exact structure:
 {"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which SQAP section>", "impact": "<business impact>"}]}
 Return ONLY valid JSON.`;
 
 const OPTIMIZER_PROMPT = `You are a Security Architect. Fix the following security or technical flaw using industry best practices including PCI-DSS, OAuth 2.0, encryption standards (AES-256), tokenization, and secure third-party integrations. Output the corrected section content in Markdown format (without the ## heading) that can replace the flawed section in the original document. Include specific implementation details and security standards used.`;
+
+function mergeAuditResults(tech: any, business: any): any {
+  const avgScore = Math.round((tech.qualityScore + business.qualityScore) / 2);
+  const gradeMap = (s: number) => s >= 90 ? "A" : s >= 80 ? "B" : s >= 70 ? "C" : s >= 60 ? "D" : "F";
+
+  // Merge and deduplicate risks via keyword matching
+  const allRisks = [...(tech.risks || []), ...(business.risks || [])];
+  const merged: any[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < allRisks.length; i++) {
+    if (used.has(i)) continue;
+    let risk = { ...allRisks[i], confidence: "normal" as string };
+    const titleWords = new Set(risk.title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3));
+
+    for (let j = i + 1; j < allRisks.length; j++) {
+      if (used.has(j)) continue;
+      const otherWords = new Set(allRisks[j].title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3));
+      const overlap = [...titleWords].filter((w) => otherWords.has(w)).length;
+      if (overlap >= 2 || risk.section === allRisks[j].section && overlap >= 1) {
+        risk.confidence = "high";
+        risk.description = risk.description + " " + allRisks[j].description;
+        if (allRisks[j].severity === "critical") risk.severity = "critical";
+        used.add(j);
+      }
+    }
+    risk.id = `risk-${Date.now()}-${i}`;
+    merged.push(risk);
+    used.add(i);
+  }
+
+  return {
+    qualityScore: avgScore,
+    grade: gradeMap(avgScore),
+    risks: merged,
+    rawJson: JSON.stringify({ techScore: tech.qualityScore, businessScore: business.qualityScore, avgScore, risks: merged }),
+  };
+}
+
+async function callLLM(systemPrompt: string, userMessage: string, apiKey: string) {
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3-flash-preview",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userMessage },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    if (response.status === 429) throw { status: 429, message: "Rate limit exceeded. Please try again later." };
+    if (response.status === 402) throw { status: 402, message: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." };
+    const errorText = await response.text();
+    console.error("AI gateway error:", response.status, errorText);
+    throw { status: 500, message: "AI gateway error" };
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
+}
+
+function parseAuditJson(raw: string) {
+  const jsonMatch = raw.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error("Failed to parse audit JSON");
+  return JSON.parse(jsonMatch[0]);
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -21,26 +118,37 @@ serve(async (req) => {
   }
 
   try {
-    const { skill, description, sqap, section, title, description: riskDesc } = await req.json();
+    const body = await req.json();
+    const { skill, description, sqap, section, title, description: riskDesc, persona, deadline } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    let systemPrompt = "";
-    let userMessage = "";
+    let result: any;
 
     switch (skill) {
-      case "architect":
-        systemPrompt = ARCHITECT_PROMPT;
-        userMessage = `Project Description:\n${description}\n\nOutput a detailed SQAP in Markdown format.`;
+      case "architect": {
+        const systemPrompt = buildArchitectPrompt(persona || "TPM", deadline || "");
+        const userMessage = `Project Description:\n${description}\n\nOutput a detailed SQAP in Markdown format.`;
+        result = await callLLM(systemPrompt, userMessage, LOVABLE_API_KEY);
         break;
-      case "auditor":
-        systemPrompt = AUDITOR_PROMPT;
-        userMessage = `SQAP Document:\n${sqap}\n\nReturn ONLY valid JSON.`;
+      }
+      case "auditor": {
+        // Run dual audit: Technical + Business personas
+        const userMessage = `SQAP Document:\n${sqap}\n\nReturn ONLY valid JSON.`;
+        const [techRaw, bizRaw] = await Promise.all([
+          callLLM(TECH_AUDITOR_PROMPT, userMessage, LOVABLE_API_KEY),
+          callLLM(BUSINESS_AUDITOR_PROMPT, userMessage, LOVABLE_API_KEY),
+        ]);
+        const techResult = parseAuditJson(techRaw);
+        const bizResult = parseAuditJson(bizRaw);
+        result = mergeAuditResults(techResult, bizResult);
         break;
-      case "optimizer":
-        systemPrompt = OPTIMIZER_PROMPT;
-        userMessage = `Flawed Section: ${section}\nIssue: ${title}\nDescription: ${riskDesc}\n\nOriginal SQAP:\n${sqap}\n\nOutput the corrected section content in Markdown.`;
+      }
+      case "optimizer": {
+        const userMessage = `Flawed Section: ${section}\nIssue: ${title}\nDescription: ${riskDesc}\n\nOriginal SQAP:\n${sqap}\n\nOutput the corrected section content in Markdown.`;
+        result = await callLLM(OPTIMIZER_PROMPT, userMessage, LOVABLE_API_KEY);
         break;
+      }
       default:
         return new Response(JSON.stringify({ error: "Invalid skill" }), {
           status: 400,
@@ -48,78 +156,16 @@ serve(async (req) => {
         });
     }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userMessage },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const data = await response.json();
-    const rawContent = data.choices?.[0]?.message?.content || "";
-
-    let result: any;
-    if (skill === "auditor") {
-      // Parse JSON from response
-      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        return new Response(JSON.stringify({ error: "Failed to parse audit JSON" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-      const parsed = JSON.parse(jsonMatch[0]);
-      // Add IDs to risks
-      parsed.risks = (parsed.risks || []).map((r: any, i: number) => ({
-        ...r,
-        id: `risk-${Date.now()}-${i}`,
-      }));
-      parsed.rawJson = jsonMatch[0];
-      result = parsed;
-    } else {
-      result = rawContent;
-    }
-
     return new Response(JSON.stringify({ result }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (e) {
+  } catch (e: any) {
     console.error("synaps-ai error:", e);
+    const status = e.status || 500;
+    const message = e.message || (e instanceof Error ? e.message : "Unknown error");
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      }
+      JSON.stringify({ error: message }),
+      { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });

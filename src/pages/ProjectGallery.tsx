@@ -1,15 +1,40 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { format } from "date-fns";
 import { useApp } from "@/context/AppContext";
-import { Project } from "@/types/synaps";
+import { Project, Persona } from "@/types/synaps";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -131,21 +156,38 @@ function ProjectCard({ project }: { project: Project }) {
 export default function ProjectGallery() {
   const navigate = useNavigate();
   const { state, dispatch } = useApp();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [projectName, setProjectName] = useState("");
+  const [persona, setPersona] = useState<Persona>("TPM");
+  const [deadline, setDeadline] = useState<Date | undefined>();
+  const [description, setDescription] = useState("");
 
-  const handleCreateNew = () => {
+  const handleCreate = () => {
+    if (!projectName.trim()) {
+      toast.error("Project name is required");
+      return;
+    }
     const newProject: Project = {
       id: `proj-${Date.now()}`,
-      name: "Untitled Project",
-      description: "",
+      name: projectName.trim(),
+      description: description.trim(),
+      persona,
+      deadline: deadline?.toISOString(),
       sqap: "",
       auditResult: null,
       score: 0,
       grade: "-",
+      files: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
     dispatch({ type: "ADD_PROJECT", project: newProject });
     dispatch({ type: "SET_CURRENT_PROJECT", id: newProject.id });
+    setModalOpen(false);
+    setProjectName("");
+    setPersona("TPM");
+    setDeadline(undefined);
+    setDescription("");
     navigate("/workspace");
   };
 
@@ -161,7 +203,7 @@ export default function ProjectGallery() {
 
         {/* Hero Create Card */}
         <button
-          onClick={handleCreateNew}
+          onClick={() => setModalOpen(true)}
           className="w-full bg-card rounded-2xl border-2 border-dashed border-border p-16 flex flex-col items-center justify-center hover:border-primary hover:border-solid transition-all duration-300 hover:scale-[1.01] group focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           aria-label="Create new project"
         >
@@ -183,6 +225,82 @@ export default function ProjectGallery() {
           </section>
         )}
       </div>
+
+      {/* Project Setup Modal */}
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">New Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5 mt-2">
+            <div className="space-y-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                placeholder="e.g., Fintech Payment Gateway"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Persona</Label>
+              <Select value={persona} onValueChange={(v) => setPersona(v as Persona)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TPM">Technical PM</SelectItem>
+                  <SelectItem value="Analyst">Analyst</SelectItem>
+                  <SelectItem value="Entrepreneur">Entrepreneur</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Deadline</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !deadline && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {deadline ? format(deadline, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={deadline}
+                    onSelect={setDeadline}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project-desc">Description</Label>
+              <Textarea
+                id="project-desc"
+                placeholder="Describe your project in detail..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={4}
+              />
+            </div>
+
+            <Button className="w-full" size="lg" onClick={handleCreate}>
+              Create Project
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

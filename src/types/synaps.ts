@@ -9,6 +9,16 @@ export interface Risk {
   isFixing?: boolean;
 }
 
+export interface NoteWidget {
+  id: string;
+  content: string;
+  createdAt: string;
+  // 'active' shows on dashboard, 'archived' hides it
+  status: 'active' | 'archived'; 
+  // Helps maintain the vertical order in the right panel
+  order: number; 
+}
+
 export interface SyncItem {
   id: string;
   externalId?: string;

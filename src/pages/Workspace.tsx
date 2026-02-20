@@ -739,7 +739,7 @@ export default function Workspace() {
             </div>
           </div>
 
-          <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto min-h-[300px]">
+          <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto scrollbar-hide min-h-[300px]">
             {state.isLoading.architect ? (
               <div className="flex flex-col items-center justify-center h-full gap-3">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -799,7 +799,7 @@ export default function Workspace() {
               <TabsTrigger value="assets">Assets</TabsTrigger>
             </TabsList>
 
-            <div className="flex-1 overflow-y-auto mt-4">
+            <div className="flex-1 overflow-y-auto scrollbar-hide mt-4">
               {/* Audit Tab */}
               <TabsContent value="audit" className="mt-0 space-y-6">
                 <AuditDashboard score={currentProject.score} grade={currentProject.grade} auditResult={activeAudit} sectionsCount={sections.length} />

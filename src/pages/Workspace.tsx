@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   Settings,
   HelpCircle,
@@ -10,9 +10,13 @@ import {
   Paperclip,
   Send,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   Check,
   Loader2,
   AlertTriangle,
+  GripVertical,
+  Github,
 } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
@@ -28,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import SettingsDialog from "@/components/SettingsDialog";
+import { SkillsStatus } from "@/components/SkillsStatus";
 import { supabase } from "@/integrations/supabase/client";
 
 // Parse SQAP markdown into sections
@@ -59,17 +64,45 @@ function parseSqapSections(sqap: string): { title: string; content: string }[] {
 function RenderMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       {lines.map((line, i) => {
-        if (line.startsWith("### ")) return <h4 key={i} className="text-base font-semibold mt-3 mb-1 text-foreground">{line.slice(4)}</h4>;
-        if (line.startsWith("- **")) {
-          const match = line.match(/^- \*\*(.+?)\*\*:?\s*(.*)/);
-          if (match) return <p key={i} className="text-sm text-muted-foreground ml-4"><strong className="text-foreground">{match[1]}:</strong> {match[2]}</p>;
+        const cleanLine = line.replace(/\*\*/g, "").trim();
+
+        // 1. Headers (###) - Large & Bold
+        if (line.startsWith("### ")) {
+          return <h2 key={i} className="text-lg font-bold mt-4 mb-2 text-foreground">{cleanLine.slice(4)}</h2>;
         }
-        if (line.startsWith("- ")) return <p key={i} className="text-sm text-muted-foreground ml-4">• {line.slice(2)}</p>;
-        if (line.match(/^\d+\.\s/)) return <p key={i} className="text-sm text-muted-foreground ml-4">{line}</p>;
+
+        // 2. Bold Bullets - High Contrast & Large Bullets
+        if (line.trim().match(/^[*-•]/)) {
+          const textOnly = cleanLine.replace(/^[*-•]\s*/, "");
+          const colonIndex = textOnly.indexOf(':');
+          
+          if (colonIndex !== -1) {
+            const label = textOnly.substring(0, colonIndex);
+            const description = textOnly.substring(colonIndex + 1);
+
+            return (
+              <p key={i} className="text-base text-foreground ml-4 flex items-start leading-relaxed">
+                {/* Bigger, Black Bullet */}
+                <span className="mr-3 text-foreground font-bold text-lg shrink-0">•</span>
+                <span>
+                  <strong className="font-bold text-foreground">{label}:</strong>
+                  <span className="text-foreground/90 ml-1 font-normal">{description}</span>
+                </span>
+              </p>
+            );
+          }
+        }
+
+        // 3. Subtitles/Bold Sections (e.g., Executive Summary)
+        if (line.trim() !== "" && !line.includes(":")) {
+          return <p key={i} className="text-base font-regular text-foreground mt-4 mb-1">{cleanLine}</p>;
+        }
+
+        // 4. Regular Paragraphs - Dark Gray/Black Regular Font
         if (line.trim() === "") return <div key={i} className="h-2" />;
-        return <p key={i} className="text-sm text-muted-foreground">{line}</p>;
+        return <p key={i} className="text-base text-foreground/90 mb-3 leading-relaxed">{cleanLine}</p>;
       })}
     </div>
   );
@@ -121,83 +154,64 @@ function ScoreGauge({ score, grade }: { score: number; grade: string }) {
   );
 }
 
-// Pipeline stepper
-function PipelineStepper({ activeStep }: { activeStep: number }) {
-  const steps = [
-    { label: "Skill 1: Extraction", desc: "The Architect" },
-    { label: "Skill 2: Computation", desc: "The Dual Auditor" },
-    { label: "Skill 3: Optimization", desc: "The Optimizer" },
-  ];
 
-  return (
-    <div className="flex flex-col gap-1">
-      {steps.map((step, i) => (
-        <div key={i} className="flex items-center gap-3 py-2">
-          <div className={`relative w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all ${
-            i < activeStep
-              ? "bg-primary border-primary"
-              : i === activeStep
-              ? "border-primary"
-              : "border-border"
-          }`}>
-            {i < activeStep ? (
-              <Check className="h-4 w-4 text-primary-foreground" />
-            ) : i === activeStep ? (
-              <>
-                <div className="w-3 h-3 rounded-full bg-primary" />
-                <div className="absolute inset-0 rounded-full border-2 border-primary animate-pulse-ring" />
-              </>
-            ) : (
-              <div className="w-3 h-3 rounded-full bg-muted" />
-            )}
-          </div>
-          <div>
-            <p className={`text-sm font-medium ${i <= activeStep ? "text-foreground" : "text-muted-foreground"}`}>{step.label}</p>
-            <p className="text-xs text-muted-foreground">{step.desc}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // Risk card
 function RiskCard({ risk, onFix }: { risk: Risk; onFix: (risk: Risk) => void }) {
   const isCritical = risk.severity === "critical";
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className={`rounded-lg p-4 border-l-4 ${
+    <div className={`rounded-lg border-l-4 ${
       isCritical ? "bg-destructive/5 border-destructive" : "bg-warning/5 border-warning"
     }`}>
-      <div className="flex items-start justify-between mb-2">
+      <div 
+        className="p-4 flex items-start justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
         <h4 className={`text-base font-bold ${isCritical ? "text-destructive" : "text-warning"}`}>
           {risk.title}
         </h4>
-        <Badge className={`text-xs shrink-0 ml-2 ${
-          isCritical ? "bg-destructive text-destructive-foreground" : "bg-warning text-warning-foreground"
-        }`}>
-          {isCritical ? "CRITICAL" : "MODERATE"}
-          {risk.confidence === "high" && " • HIGH CONFIDENCE"}
-        </Badge>
+        <div className="flex items-center gap-2 ml-2 shrink-0">
+          <Badge className={`text-xs ${
+            isCritical ? "bg-destructive text-destructive-foreground" : "bg-warning text-warning-foreground"
+          }`}>
+            {isCritical ? "CRITICAL" : "MODERATE"}
+            {risk.confidence === "high" && " • HIGH CONFIDENCE"}
+          </Badge>
+          {isExpanded ? (
+            <ChevronUp className={`h-4 w-4 ${isCritical ? "text-destructive" : "text-warning"}`} />
+          ) : (
+            <ChevronDown className={`h-4 w-4 ${isCritical ? "text-destructive" : "text-warning"}`} />
+          )}
+        </div>
       </div>
-      <p className={`text-sm mb-2 ${isCritical ? "text-destructive/80" : "text-warning/80"}`}>
-        {risk.description}
-      </p>
-      <p className={`text-xs mb-3 ${isCritical ? "text-destructive/60" : "text-warning/60"}`}>
-        Section: {risk.section}
-      </p>
-      <button
-        onClick={() => onFix(risk)}
-        disabled={risk.isFixing}
-        className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors"
-      >
-        {risk.isFixing ? (
-          <Loader2 className="h-4 w-4 animate-spin" />
-        ) : (
-          <Sparkles className="h-4 w-4" />
-        )}
-        {risk.isFixing ? "Fixing..." : "FIX ISSUE"}
-      </button>
+      
+      {isExpanded && (
+        <div className="px-4 pb-4">
+          <p className={`text-sm mb-2 ${isCritical ? "text-red-800" : "text-orange-800"}`}>
+            {risk.description}
+          </p>
+          <p className={`text-xs mb-3 ${isCritical ? "text-destructive/60" : "text-warning/60"}`}>
+            Section: {risk.section}
+          </p>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onFix(risk);
+            }}
+            disabled={risk.isFixing}
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors"
+          >
+            {risk.isFixing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )}
+            {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -219,12 +233,114 @@ function generateMetricsCsv(auditResult: any, projectName: string): string {
 
 export default function Workspace() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { state, dispatch, currentProject, updateCurrentProject } = useApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [activeTab, setActiveTab] = useState("status");
+  const [activeTab, setActiveTab] = useState("audit");
   const [sqapContent, setSqapContent] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [rightPanelWidth, setRightPanelWidth] = useState(35);
+  const [isDragging, setIsDragging] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+  
+  // GitHub Integration State
+  const [isGitHubConnected, setIsGitHubConnected] = useState(false);
+  const [isSyncOn, setIsSyncOn] = useState(false);
+
+  const toggleSync = () => {
+    const newState = !isSyncOn;
+    setIsSyncOn(newState);
+    if (newState) setIsGitHubConnected(true);
+    toast.success(newState ? "GitHub Sync Enabled" : "GitHub Sync Paused");
+  };
+
+  // GitHub API Skill
+  async function pushToGitHub(content: string) {
+    if (!isGitHubConnected || !isSyncOn) return;
+
+    // Placeholder for PAT - User instruction
+    const PAT = import.meta.env.VITE_GITHUB_PAT;
+    const OWNER = "your-username"; // Placeholder
+    const REPO = "synaps-artifacts"; // Placeholder
+    const PATH = "synaps-project.md";
+
+    if (!PAT) {
+      toast.error("GitHub Sync: Missing VITE_GITHUB_PAT in .env.local");
+      return;
+    }
+
+    try {
+      // 1. Get SHA if file exists
+      let sha;
+      try {
+        const getRes = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`, {
+          headers: { Authorization: `Bearer ${PAT}` }
+        });
+        if (getRes.ok) {
+          const data = await getRes.json();
+          sha = data.sha;
+        }
+      } catch (e) {
+        // File likely doesn't exist
+      }
+
+      // 2. Create or Update
+      const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${PAT}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: "Update Artifact via Synaps AI",
+          content: btoa(unescape(encodeURIComponent(content))),
+          sha
+        })
+      });
+
+      if (res.ok) {
+        toast.success("Artifact synced to GitHub");
+      } else {
+        console.error("GitHub Sync Error:", await res.text());
+        toast.error("Failed to sync to GitHub");
+      }
+    } catch (error) {
+      console.error("GitHub Sync Error:", error);
+      toast.error("Failed to sync to GitHub");
+    }
+  }
+
+  // Theme & Design State
+  const [darkMode, setDarkMode] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("theme") === "dark" || 
+             (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    if (darkMode) {
+      root.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      root.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [darkMode]);
+
+  // Handle incoming prompt from dashboard
+  useEffect(() => {
+    if (location.state?.initialPrompt) {
+      setInputText(location.state.initialPrompt);
+    }
+  }, [location.state]);
 
   // Determine pipeline step
   const activeStep = currentProject?.auditResult
@@ -246,6 +362,69 @@ export default function Workspace() {
     setSqapContent(sqapFile?.content || currentProject.sqap || "");
   }, [currentProject?.files, currentProject?.sqap]);
 
+  // Resizing logic
+  const startResizing = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const resize = useCallback(
+    (e: MouseEvent) => {
+      if (isDragging && containerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const newRightWidth = ((containerRect.right - e.clientX) / containerRect.width) * 100;
+        if (newRightWidth >= 30 && newRightWidth <= 50) {
+          setRightPanelWidth(newRightWidth);
+        }
+      }
+    },
+    [isDragging]
+  );
+
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
+    }
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isDragging, resize, stopResizing]);
+
+  // Navbar renaming logic
+  const handleNameClick = () => {
+    setTempName(currentProject?.name || "Untitled");
+    setIsEditingName(true);
+  };
+
+  const handleNameSave = () => {
+    const newName = tempName.trim() || "Untitled";
+    if (currentProject && newName !== currentProject.name) {
+      updateCurrentProject({ name: newName });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleNameSave();
+    } else if (e.key === "Escape") {
+      setIsEditingName(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isEditingName && nameInputRef.current) {
+      nameInputRef.current.focus();
+      nameInputRef.current.select();
+    }
+  }, [isEditingName]);
+
   if (!currentProject) return null;
 
   const sections = parseSqapSections(sqapContent);
@@ -253,7 +432,7 @@ export default function Workspace() {
   // Read audit from files array
   const auditFile = currentProject.files?.find((f) => f.name === "Audit.json");
   const auditFromFile = auditFile ? JSON.parse(auditFile.content) : null;
-  const activeAudit = auditFromFile || currentProject.auditResult;
+  const activeAudit = currentProject.auditResult || auditFromFile;
 
   async function callSkill(skill: string, payload: Record<string, string>) {
     const { data, error } = await supabase.functions.invoke("synaps-ai", {
@@ -285,7 +464,7 @@ export default function Workspace() {
 
     const description = inputText.trim() || currentProject?.description || "";
     updateCurrentProject({ description });
-    setActiveTab("status");
+    setActiveTab("audit");
 
     // Demo mode shortcut
     if (state.demoMode) {
@@ -311,6 +490,7 @@ export default function Workspace() {
       const sqap = architectData.result;
       const files = buildFiles(sqap);
       updateCurrentProject({ sqap, files });
+      pushToGitHub(sqap);
       toast.success("SQAP generated successfully!");
 
       // Skill 2: Dual Auditor
@@ -402,7 +582,7 @@ export default function Workspace() {
     const risks = activeAudit?.risks.map((r: Risk) =>
       r.id === risk.id ? { ...r, isFixing: true } : r
     ) || [];
-    updateCurrentProject({ auditResult: { ...currentProject.auditResult!, risks } });
+    updateCurrentProject({ auditResult: { ...activeAudit, risks } });
 
     dispatch({ type: "SET_LOADING", loading: { optimizer: true } });
     try {
@@ -416,6 +596,7 @@ export default function Workspace() {
       const mergedSqap = fixData.result;
       const mergedFiles = buildFiles(mergedSqap, currentProject.auditResult);
       updateCurrentProject({ sqap: mergedSqap, files: mergedFiles });
+      pushToGitHub(mergedSqap);
       toast.success(`Fixed: ${risk.title}`);
 
       // Re-run audit on the merged SQAP
@@ -477,22 +658,82 @@ export default function Workspace() {
   return (
     <div className="flex flex-col h-screen bg-background">
       {/* Top Nav */}
-      <nav className="bg-card border-b border-border h-16 flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-4">
+      <nav className="bg-card border-b border-border h-16 flex items-center justify-between px-6 shrink-0 relative">
+        <div className="flex items-center gap-4 z-10">
           <button onClick={() => navigate("/")} className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Back to gallery">
             <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
           <span className="text-2xl font-bold text-primary">SYNAPS</span>
           <span className="text-muted-foreground">|</span>
-          <span className="text-sm font-medium text-muted-foreground">THE WORKSPACE</span>
+          {isEditingName ? (
+            <div className="relative grid items-center max-w-md">
+              <span className="col-start-1 row-start-1 opacity-0 whitespace-pre text-lg font-semibold pointer-events-none">
+                {tempName || "Untitled"}
+              </span>
+              <input
+                ref={nameInputRef}
+                value={tempName}
+                onChange={(e) => setTempName(e.target.value)}
+                onBlur={handleNameSave}
+                onKeyDown={handleNameKeyDown}
+                className="col-start-1 row-start-1 text-lg font-semibold text-foreground bg-transparent outline-none border-none p-0 w-full"
+              />
+            </div>
+          ) : (
+            <span
+              onClick={handleNameClick}
+              className="text-lg font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors truncate max-w-md"
+              title={currentProject.name || "Untitled"}
+            >
+              {(currentProject.name || "Untitled").length > 20
+                ? `${(currentProject.name || "Untitled").slice(0, 20)}...`
+                : (currentProject.name || "Untitled")}
+            </span>
+          )}
           {currentProject.persona && (
             <Badge variant="outline" className="ml-2 text-xs">{currentProject.persona}</Badge>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setSettingsOpen(true)} className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Settings">
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <SkillsStatus activeStep={activeStep} />
+        </div>
+        <div className="flex items-center gap-2 relative z-10">
+          <button
+            onClick={toggleSync}
+            className={`rounded-lg p-2 transition-all duration-300 ${
+              isSyncOn
+                ? "text-[#6e5494]"
+                : "text-muted-foreground hover:bg-muted"
+            }`}
+            aria-label="Toggle GitHub Sync"
+          >
+            <Github className={`h-5 w-5 ${isSyncOn ? "drop-shadow-[0_0_10px_rgba(110,84,148,0.8)] animate-pulse" : ""}`} />
+          </button>
+          <button 
+            onClick={() => setSettingsDropdownOpen(!settingsDropdownOpen)} 
+            className={`hover:bg-muted rounded-lg p-2 transition-colors ${settingsDropdownOpen ? "bg-muted" : ""}`} 
+            aria-label="Settings"
+          >
             <Settings className="h-5 w-5 text-muted-foreground" />
           </button>
+          
+          {settingsDropdownOpen && (
+            <div className="absolute top-full right-0 mt-2 w-64 bg-popover border border-border rounded-xl shadow-xl p-4 z-50 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Dark Mode</span>
+                <Switch checked={darkMode} onCheckedChange={setDarkMode} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Demo Mode</span>
+                <Switch checked={state.demoMode} onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Technical View</span>
+                <Switch checked={state.showRawJson} onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })} />
+              </div>
+            </div>
+          )}
+          
           <button className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Help">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
           </button>
@@ -501,9 +742,9 @@ export default function Workspace() {
       </nav>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+      <div ref={containerRef} className={`flex-1 overflow-hidden flex flex-col lg:flex-row gap-6 lg:gap-0 p-6 ${isDragging ? "select-none cursor-col-resize" : ""}`}>
         {/* Left Panel - The Artifact */}
-        <section className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden">
+        <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
             {sqapContent && (
@@ -528,7 +769,7 @@ export default function Workspace() {
                   <AccordionItem key={i} value={`section-${i}`}>
                     <AccordionTrigger className="hover:no-underline">
                       <div className="flex items-center gap-2">
-                        <span className="text-base font-semibold">{section.title}</span>
+                        <span className="text-base font-bold">{section.title}</span>
                         <button
                           onClick={(e) => { e.stopPropagation(); handleCopySection(section.content); }}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
@@ -554,30 +795,29 @@ export default function Workspace() {
           </div>
         </section>
 
+        {/* Drag Handle */}
+        <div
+          className="hidden lg:flex w-6 cursor-col-resize items-center justify-center shrink-0 hover:bg-primary/5 transition-colors group"
+          onMouseDown={startResizing}
+        >
+          <div className={`w-1 h-12 rounded-full transition-colors ${isDragging ? "bg-primary" : "bg-border group-hover:bg-primary/50"}`} />
+        </div>
+
         {/* Right Panel - Mission Control (Tabbed) */}
-        <section className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden">
+        <section 
+          className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0"
+          style={{ width: window.innerWidth >= 1024 ? `${rightPanelWidth}%` : '100%' }}
+        >
           <h2 className="text-2xl font-bold text-foreground mb-4">Mission Control</h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="grid w-full grid-cols-4 shrink-0">
-              <TabsTrigger value="status">Status</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3 shrink-0">
               <TabsTrigger value="audit">Audit</TabsTrigger>
               <TabsTrigger value="gaps">Gap Feed</TabsTrigger>
               <TabsTrigger value="assets">Assets</TabsTrigger>
             </TabsList>
 
             <div className="flex-1 overflow-y-auto mt-4">
-              {/* Status Tab */}
-              <TabsContent value="status" className="mt-0 space-y-6">
-                <PipelineStepper activeStep={activeStep} />
-                {isAnyLoading && (
-                  <div className="flex items-center gap-2 text-sm text-primary">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {state.isLoading.architect ? "Running Architect..." : state.isLoading.auditor ? "Running Dual Audit..." : "Running Optimizer..."}
-                  </div>
-                )}
-              </TabsContent>
-
               {/* Audit Tab */}
               <TabsContent value="audit" className="mt-0 space-y-6">
                 <ScoreGauge score={currentProject.score} grade={currentProject.grade} />
@@ -597,14 +837,6 @@ export default function Workspace() {
                     "RUN DUAL AUDIT"
                   )}
                 </Button>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-foreground">Show Raw JSON</span>
-                  <Switch
-                    checked={state.showRawJson}
-                    onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })}
-                  />
-                </div>
 
                 {state.showRawJson && activeAudit?.rawJson && (
                   <pre className="bg-muted/50 border border-border rounded-lg p-4 text-xs overflow-x-auto text-muted-foreground max-h-48">

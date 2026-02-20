@@ -57,15 +57,22 @@ function mergeAuditResults(tech: any, business: any): any {
   const merged: any[] = [];
   const used = new Set<number>();
 
+  // Pre-compute word sets for optimization
+  const riskWordSets = allRisks.map((r: any) => 
+    new Set((r.title || "").toLowerCase().split(/\s+/).filter((w: string) => w.length > 3))
+  );
+
   for (let i = 0; i < allRisks.length; i++) {
     if (used.has(i)) continue;
     let risk = { ...allRisks[i], confidence: "normal" as string };
-    const titleWords = new Set(risk.title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3));
+    const titleWords = riskWordSets[i];
 
     for (let j = i + 1; j < allRisks.length; j++) {
       if (used.has(j)) continue;
-      const otherWords = new Set(allRisks[j].title.toLowerCase().split(/\s+/).filter((w: string) => w.length > 3));
-      const overlap = [...titleWords].filter((w) => otherWords.has(w)).length;
+      const otherWords = riskWordSets[j];
+      let overlap = 0;
+      titleWords.forEach((w) => { if (otherWords.has(w)) overlap++; });
+
       if (overlap >= 2 || risk.section === allRisks[j].section && overlap >= 1) {
         risk.confidence = "high";
         risk.description = risk.description + " " + allRisks[j].description;
@@ -94,7 +101,7 @@ async function callLLM(systemPrompt: string, userMessage: string, apiKey: string
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -107,7 +114,7 @@ async function callLLM(systemPrompt: string, userMessage: string, apiKey: string
     if (response.status === 402) throw { status: 402, message: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." };
     const errorText = await response.text();
     console.error("AI gateway error:", response.status, errorText);
-    throw { status: 500, message: "AI gateway error" };
+    throw { status: response.status, message: `AI gateway error: ${errorText}` };
   }
 
   const data = await response.json();
@@ -153,7 +160,7 @@ serve(async (req) => {
         break;
       }
       case "optimizer": {
-        const userMessage = `Flawed Section: ${section}\nIssue: ${title}\nDescription: ${riskDesc}\n\nOriginal SQAP:\n${sqap}\n\nOutput the corrected section content in Markdown.`;
+        const userMessage = `Flawed Section: ${section}\nIssue: ${title}\nDescription: ${riskDesc}\n\nOriginal SQAP:\n${sqap}\n\nOutput the full corrected SQAP in Markdown.`;
         result = await callLLM(OPTIMIZER_PROMPT, userMessage, LOVABLE_API_KEY);
         break;
       }

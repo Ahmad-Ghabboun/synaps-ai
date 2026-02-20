@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Calendar as DeadlineIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useApp } from "@/context/AppContext";
 import { Project, Persona } from "@/types/synaps";
@@ -35,6 +35,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -100,22 +101,33 @@ function ProjectCard({ project }: { project: Project }) {
       }}
     >
       <div className="flex items-start justify-between mb-2">
-        {isRenaming ? (
-          <input
-            className="text-xl font-bold text-foreground bg-transparent border-b-2 border-primary outline-none w-full mr-2"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onBlur={handleRename}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") handleRename();
-              if (e.key === "Escape") setIsRenaming(false);
-            }}
-            onClick={(e) => e.stopPropagation()}
-            autoFocus
-          />
-        ) : (
-          <h3 className="text-xl font-bold text-foreground pr-2">{project.name}</h3>
-        )}
+        <div className="flex flex-col gap-1 w-full pr-2">
+          {isRenaming ? (
+            <input
+              className="text-xl font-bold text-foreground bg-transparent border-b-2 border-primary outline-none w-full mr-2"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onBlur={handleRename}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleRename();
+                if (e.key === "Escape") setIsRenaming(false);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              autoFocus
+            />
+          ) : (
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="text-xl font-bold text-foreground">{project.name}</h3>
+              {/* DEADLINE PILL ADDED HERE */}
+              {project.deadline && (
+                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1 py-0 px-2 h-5">
+                  <DeadlineIcon className="h-3 w-3" />
+                  {format(new Date(project.deadline), "MMM d, yyyy")}
+                </Badge>
+              )}
+            </div>
+          )}
+        </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -161,6 +173,11 @@ export default function ProjectGallery() {
   const [persona, setPersona] = useState<Persona>("TPM");
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [description, setDescription] = useState("");
+
+  // SORTING LOGIC: Sort projects by newest updatedAt first
+  const sortedProjects = [...state.projects].sort((a, b) => 
+    new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
 
   const handleCreate = () => {
     if (!projectName.trim()) {
@@ -214,11 +231,11 @@ export default function ProjectGallery() {
         </button>
 
         {/* Recent Projects */}
-        {state.projects.length > 0 && (
+        {sortedProjects.length > 0 && (
           <section className="mt-12" aria-label="Recent projects">
             <h2 className="text-2xl font-bold text-foreground mb-6">Recent Projects</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {state.projects.map((project) => (
+              {sortedProjects.map((project) => (
                 <ProjectCard key={project.id} project={project} />
               ))}
             </div>

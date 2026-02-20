@@ -146,17 +146,18 @@ The Fintech Payment Gateway is a comprehensive payment processing platform desig
 
 export const SAMPLE_PROJECTS: Project[] = [
   {
-    id: "proj-1",
-    name: "Seattle Car Detailing Business Plan",
+    id: "proj-3",
+    name: "Mobile Car Pooling Business Plan",
     description: "",
     sqap: "",
     auditResult: null,
-    score: 85,
+    score: 92,
     grade: "A",
     files: [],
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
+  DEMO_PROJECT,
   {
     id: "proj-2",
     name: "Mobile App Launch Strategy",
@@ -170,15 +171,15 @@ export const SAMPLE_PROJECTS: Project[] = [
     updatedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
-    id: "proj-3",
-    name: "Mobile Car Pooling Business Plan",
+    id: "proj-1",
+    name: "Seattle Car Detailing Business Plan",
     description: "",
     sqap: "",
     auditResult: null,
-    score: 92,
+    score: 85,
     grade: "A",
     files: [],
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
   },
   {
@@ -193,5 +194,4 @@ export const SAMPLE_PROJECTS: Project[] = [
     createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
     updatedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
   },
-  DEMO_PROJECT,
 ];

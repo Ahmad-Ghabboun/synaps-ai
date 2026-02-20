@@ -24,7 +24,14 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_PROJECTS":
       return { ...state, projects: action.projects };
     case "ADD_PROJECT":
-      return { ...state, projects: [...state.projects, action.project] };
+  return { 
+    ...state, 
+    projects: [...state.projects, { 
+      ...action.project, 
+      createdAt: action.project.createdAt || new Date().toISOString(),
+      updatedAt: action.project.updatedAt || new Date().toISOString()
+    }] 
+  };
     case "UPDATE_PROJECT":
       return {
         ...state,

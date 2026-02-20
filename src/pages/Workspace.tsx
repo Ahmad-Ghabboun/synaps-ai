@@ -74,8 +74,8 @@ function RenderMarkdown({ text }: { text: string }) {
         }
 
         // 2. Bold Bullets - High Contrast & Large Bullets
-        if (line.trim().match(/^[*-•]/)) {
-          const textOnly = cleanLine.replace(/^[*-•]\s*/, "");
+        if (line.trim().match(/^[-*•]/)) {
+          const textOnly = cleanLine.replace(/^[-*•]\s*/, "");
           const colonIndex = textOnly.indexOf(':');
           
           if (colonIndex !== -1) {
@@ -246,7 +246,9 @@ export default function Workspace() {
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
+  const uploadRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
+  
   
   // GitHub Integration State
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
@@ -651,6 +653,26 @@ export default function Workspace() {
     files.forEach((f) => handleDownloadFile(f));
   }
 
+  function handleUploadFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      const ext = file.name.split(".").pop() || "md";
+      const validTypes = ["md", "json", "csv", "pdf"];
+      const fileType = validTypes.includes(ext) ? ext : "md";
+      const newFile: FileObject = { name: file.name, type: fileType as "md" | "json" | "csv" | "pdf", content };
+      updateCurrentProject({
+        sqap: content,
+        files: [newFile, ...(currentProject.files?.filter(f => f.name !== file.name) || [])],
+      });
+      toast.success(`Uploaded ${file.name} — ready to audit!`);
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  }
+
   const isAnyLoading = state.isLoading.architect || state.isLoading.auditor || state.isLoading.optimizer;
   const projectFiles = currentProject.files || [];
   const displayFiles = ["SQAP.md", "Audit.json", "Metrics.csv", "Report.pdf"];
@@ -747,14 +769,18 @@ export default function Workspace() {
         <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
-            {sqapContent && (
-              <Button variant="outline" size="sm" onClick={() => {
+            <div className="flex items-center gap-2">
+              <input ref={uploadRef} type="file" accept=".md,.txt,.csv" className="hidden" onChange={handleUploadFile} />
+              <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
+                <Paperclip className="h-4 w-4 mr-1" /> Upload My Own
+              </Button>
+              <Button variant="outline" size="sm" disabled={!sqapContent} onClick={() => {
                 const sqapFileObj = projectFiles.find(f => f.name === "SQAP.md");
                 if (sqapFileObj) handleDownloadFile(sqapFileObj);
               }}>
                 <Download className="h-4 w-4 mr-1" /> Download
               </Button>
-            )}
+            </div>
           </div>
 
           <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto min-h-[300px]">

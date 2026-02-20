@@ -13,24 +13,26 @@ const Index = () => {
   const [notes, setNotes] = useState<any[]>([]);
 
   // Sort projects: Newest created first (Newest -> Oldest)
-  const sortedProjects = [...state.projects].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+const sortedProjects = [...state.projects].sort((a, b) => {
+  const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+  const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+  return dateB - dateA;
+});
 
   useEffect(() => {
     const fetchNotes = async () => {
-      const { data } = await supabase
-        .from("sync_items")
-        .select("*")
-        .order("created_at", { ascending: false });
+const { data } = await (supabase as any)
+  .from("sync_items")
+  .select("*")
+  .order("created_at", { ascending: false });
       if (data) setNotes(data);
     };
     fetchNotes();
 
-    const channel = supabase
-      .channel("public:sync_items")
-      .on(
-        "postgres_changes",
+    const channel = (supabase as any)
+  .channel("public:sync_items")
+  .on(
+    "postgres_changes",
         { event: "INSERT", schema: "public", table: "sync_items" },
         (payload) => {
           setNotes((prev) => [payload.new, ...prev]);

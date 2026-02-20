@@ -26,17 +26,23 @@ Generate 3 professional Markdown documents combined into one output with clear #
 Be thorough, specific, and technically detailed. Tailor language and emphasis to the user's persona.`;
 }
 
-const TECH_AUDITOR_PROMPT = `You are a Technical Risk Auditor. Analyze the provided SQAP document from a TECHNICAL perspective.
-Focus on: architecture flaws, security gaps, scalability issues, technical debt, missing specifications.
-You MUST output STRICTLY in JSON format with NO markdown formatting, NO backticks, NO additional text. Use this exact structure:
-{"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which SQAP section>", "impact": "<business impact>"}]}
-Return ONLY valid JSON.`;
+function buildTechAuditorPrompt(persona: string): string {
+  const personaCtx = PERSONA_CONTEXT[persona] || PERSONA_CONTEXT.TPM;
+  return `You are an independent Technical Risk Auditor. ${personaCtx}
+Analyze the document and identify genuine technical gaps that could cause the project to fail.
+Be fair — score relative to what a ${persona} planning document at this stage should contain.
+You MUST output STRICTLY in JSON with NO markdown, NO backticks, NO extra text:
+{"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which section>", "impact": "<business impact>"}]}`;
+}
 
-const BUSINESS_AUDITOR_PROMPT = `You are a Business Risk Auditor. Analyze the provided SQAP document from a BUSINESS perspective.
-Focus on: market risks, regulatory compliance, cost overruns, stakeholder impact, competitive threats.
-You MUST output STRICTLY in JSON format with NO markdown formatting, NO backticks, NO additional text. Use this exact structure:
-{"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which SQAP section>", "impact": "<business impact>"}]}
-Return ONLY valid JSON.`;
+function buildBusinessAuditorPrompt(persona: string): string {
+  const personaCtx = PERSONA_CONTEXT[persona] || PERSONA_CONTEXT.TPM;
+  return `You are an independent Business Risk Auditor. ${personaCtx}
+Analyze the document and identify genuine business gaps that could cause the project to fail.
+Be fair — score relative to what a ${persona} planning document at this stage should contain.
+You MUST output STRICTLY in JSON with NO markdown, NO backticks, NO extra text:
+{"qualityScore": <number 0-100>, "grade": "<letter A-F>", "risks": [{"severity": "critical" or "moderate", "title": "<short title>", "description": "<detailed description>", "section": "<which section>", "impact": "<business impact>"}]}`;
+}
 
 const OPTIMIZER_PROMPT = `You are a Security Architect. You will receive a complete SQAP document and a specific flaw to fix.
 
@@ -151,9 +157,9 @@ serve(async (req) => {
         // Run dual audit: Technical + Business personas
         const userMessage = `SQAP Document:\n${sqap}\n\nReturn ONLY valid JSON.`;
         const [techRaw, bizRaw] = await Promise.all([
-          callLLM(TECH_AUDITOR_PROMPT, userMessage, LOVABLE_API_KEY),
-          callLLM(BUSINESS_AUDITOR_PROMPT, userMessage, LOVABLE_API_KEY),
-        ]);
+        callLLM(buildTechAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY),
+        callLLM(buildBusinessAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY),
+      ]);
         const techResult = parseAuditJson(techRaw);
         const bizResult = parseAuditJson(bizRaw);
         result = mergeAuditResults(techResult, bizResult);

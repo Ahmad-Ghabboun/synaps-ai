@@ -95,3 +95,102 @@
     @apply bg-background text-foreground font-sans antialiased;
   }
 }
+
+/* AuditDashboard Animations */
+
+@keyframes rotate-glow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes breathe-glow {
+  0%, 100% { box-shadow: 0 0 8px 0 var(--breathe-color, hsl(var(--border))); }
+  50% { box-shadow: 0 0 16px 2px var(--breathe-color, hsl(var(--border))); }
+}
+
+/* Ring glow rotation */
+.audit-ring-glow-rotate {
+  animation: rotate-glow 4s linear infinite;
+  transform-origin: center center;
+}
+
+/* Ring stroke colors */
+.audit-ring-stroke {
+  stroke: url(#ring-gradient-light);
+  filter: drop-shadow(0 0 6px hsl(217 91% 60% / 0.3));
+}
+.dark .audit-ring-stroke {
+  stroke: url(#ring-gradient-dark);
+  filter: drop-shadow(0 0 10px hsl(185 96% 55% / 0.5)) drop-shadow(0 0 20px hsl(270 80% 60% / 0.3));
+}
+
+/* Bar colors */
+.audit-bar-red { background: hsl(0 84% 60%); }
+.dark .audit-bar-red { background: hsl(0 84% 60%); box-shadow: 0 0 8px hsl(0 84% 60% / 0.6); }
+
+.audit-bar-blue { background: hsl(217 91% 60%); }
+.dark .audit-bar-blue { background: hsl(217 91% 60%); box-shadow: 0 0 8px hsl(217 91% 60% / 0.6); }
+
+.audit-bar-green { background: hsl(160 84% 39%); }
+.dark .audit-bar-green { background: hsl(160 84% 39%); box-shadow: 0 0 8px hsl(160 84% 39% / 0.6); }
+
+.audit-bar-purple { background: hsl(270 80% 60%); }
+.dark .audit-bar-purple { background: hsl(270 80% 60%); box-shadow: 0 0 8px hsl(270 80% 60% / 0.6); }
+
+.audit-bar-teal { background: hsl(175 70% 41%); }
+.dark .audit-bar-teal { background: hsl(175 70% 41%); box-shadow: 0 0 8px hsl(175 70% 41% / 0.6); }
+
+/* Bar shimmer */
+.audit-bar-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.audit-bar-shimmer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+  animation: shimmer 2s ease-in-out infinite;
+}
+.dark .audit-bar-shimmer::after {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+}
+
+/* Counter card colors */
+.audit-counter-red {
+  --breathe-color: hsl(0 84% 60% / 0.3);
+  border-color: hsl(0 84% 60% / 0.2);
+}
+.dark .audit-counter-red {
+  --breathe-color: hsl(0 84% 60% / 0.5);
+  border-color: hsl(0 84% 60% / 0.3);
+}
+
+.audit-counter-yellow {
+  --breathe-color: hsl(38 92% 50% / 0.3);
+  border-color: hsl(38 92% 50% / 0.2);
+}
+.dark .audit-counter-yellow {
+  --breathe-color: hsl(38 92% 50% / 0.5);
+  border-color: hsl(38 92% 50% / 0.3);
+}
+
+.audit-counter-neutral {
+  --breathe-color: hsl(var(--muted-foreground) / 0.2);
+  border-color: hsl(var(--border));
+}
+.dark .audit-counter-neutral {
+  --breathe-color: hsl(var(--muted-foreground) / 0.3);
+}
+
+.audit-counter-breathe {
+  animation: breathe-glow 2s ease-in-out infinite;
+}

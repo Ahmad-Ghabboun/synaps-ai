@@ -33,6 +33,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import SettingsDialog from "@/components/SettingsDialog";
 import { SkillsStatus } from "@/components/SkillsStatus";
+import AuditDashboard from "@/components/AuditDashboard";
 import { supabase } from "@/integrations/supabase/client";
 
 // Parse SQAP markdown into sections
@@ -108,51 +109,6 @@ function RenderMarkdown({ text }: { text: string }) {
   );
 }
 
-// Circular gauge
-function ScoreGauge({ score, grade }: { score: number; grade: string }) {
-  const [animatedScore, setAnimatedScore] = useState(0);
-  const radius = 80;
-  const circumference = 2 * Math.PI * radius;
-
-  useEffect(() => {
-    const timer = setTimeout(() => setAnimatedScore(score), 100);
-    return () => clearTimeout(timer);
-  }, [score]);
-
-  const offset = circumference - (animatedScore / 100) * circumference;
-
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative w-[200px] h-[200px]">
-        <svg width="200" height="200" viewBox="0 0 200 200" className="-rotate-90">
-          <circle cx="100" cy="100" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" />
-          <circle
-            cx="100" cy="100" r={radius} fill="none"
-            stroke="hsl(var(--primary))" strokeWidth="12"
-            strokeDasharray={circumference} strokeDashoffset={offset}
-            strokeLinecap="round"
-            className="transition-all duration-1000 ease-out"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-5xl font-bold text-foreground">{animatedScore}</span>
-          <span className="text-sm text-muted-foreground">{grade}</span>
-          <span className="text-xs text-muted-foreground mt-1">Completeness Score</span>
-        </div>
-      </div>
-      <div className="flex items-center gap-4 mt-4">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-success" />
-          <span className="text-sm text-muted-foreground">Technical: Active</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-success" />
-          <span className="text-sm text-muted-foreground">Business: Active</span>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 
 
@@ -846,7 +802,7 @@ export default function Workspace() {
             <div className="flex-1 overflow-y-auto mt-4">
               {/* Audit Tab */}
               <TabsContent value="audit" className="mt-0 space-y-6">
-                <ScoreGauge score={currentProject.score} grade={currentProject.grade} />
+                <AuditDashboard score={currentProject.score} grade={currentProject.grade} auditResult={activeAudit} sectionsCount={sections.length} />
 
                 <Button
                   className="w-full py-4 text-lg font-bold"

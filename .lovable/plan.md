@@ -1,86 +1,100 @@
+# Replace ScoreGauge with AuditDashboard Component
 
+## Overview
 
-# Fix Optimizer (Skill 3) -- Zero-Loss Merging and UI Sync
-
-## Problems Identified
-
-1. **Section replacement destroys content**: `replaceSectionInSQAP()` drops all existing lines in the target section and replaces them with only the optimizer output. The full document structure is preserved, but the section body is lost.
-
-2. **Files array not updated after fix**: `handleFix()` calls `updateCurrentProject({ sqap: updatedSqap })` without rebuilding the `files` array. Since the left panel reads from `project.files[].content` (the `SQAP.md` file object), the accordion goes blank after a fix because the file object still has stale/missing content.
-
-3. **No reactive re-render on file changes**: The `sections` variable is computed inline but there is no mechanism to force re-render when the files array updates asynchronously.
+Create a new `src/components/AuditDashboard.tsx` component with three visual sections inspired by the reference image: a glowing circular ring, five animated metric bars, and three slot-machine flip counters. Replace the `ScoreGauge` usage in the Audit tab with this new component.
 
 ---
 
-## Changes
+## 1. New File: `src/components/AuditDashboard.tsx`
 
-### 1. Update Optimizer System Prompt (Edge Function)
+A single self-contained component with props: `score`, `grade`, `auditResult`, `sectionsCount`.
 
-**File:** `supabase/functions/synaps-ai/index.ts`
+### Internal computed values:
 
-Update `OPTIMIZER_PROMPT` to instruct the LLM to output the **entire SQAP document** with the fix merged in, not just the corrected section. The prompt will explicitly say:
-- Treat the current SQAP as a base document
-- Merge/append new technical requirements into the relevant section header
-- Never delete or omit any existing sections
-- Output the complete document in Markdown
+- `criticalCount` = risks with severity "critical"
+- `moderateCount` = risks with severity "moderate"
+- `totalGaps` = criticalCount + moderateCount
+- `highConfidenceCount` = risks with confidence "high"
+- `resolvedCount` = 0 (no removed-risks tracking yet; placeholder for future)
 
-This ensures the optimizer returns a full, intact SQAP with the fix intelligently merged.
+### Section A: Glowing Circular Ring
 
-### 2. Rewrite `handleFix()` in Workspace.tsx
+- SVG circle with animated stroke-dashoffset counting up from 0 to score
+- Score percentage text in center with grade below
+- CSS classes for dark mode: cyan-to-purple neon gradient (`conic-gradient` or SVG `linearGradient`), outer glow via `filter: drop-shadow` with animated rotation using CSS `@keyframes rotate-glow`
+- Light mode: blue-to-indigo gradient with soft `box-shadow`
+- After load animation completes, outer glow ring rotates continuously via a second SVG circle with rotating gradient
 
-**File:** `src/pages/Workspace.tsx`
+### Section B: Five Metric Bar Rows
 
-- Remove the call to `replaceSectionInSQAP()` entirely since the optimizer now returns the complete document
-- After receiving the full merged SQAP from the optimizer, immediately call `buildFiles(updatedSqap)` to regenerate the `SQAP.md` file object
-- Update the project with both `sqap` and `files` in a single `updateCurrentProject()` call so the UI syncs immediately
-- When re-running the audit after the fix, pass the updated SQAP and rebuild files again with audit results
+Each row is a rounded card containing:
 
-### 3. Add `useEffect` for File-Driven Re-Render
+- Label text (left), fraction/percentage + badge (right)
+- Animated horizontal bar that grows from 0 to target width on mount using CSS transition
+- Continuous shimmer overlay using a pseudo-element with `@keyframes shimmer` (translateX sweep)
+- Dark mode: neon glow on bar via `box-shadow` in respective color
+- Light mode: soft white sheen sweep, subtle drop shadow
 
-**File:** `src/pages/Workspace.tsx`
 
-- Add a `sqapContent` state variable driven by a `useEffect` that watches `currentProject.files`
-- When the files array changes, extract the `SQAP.md` file content and set it to state
-- The `sections` array will be computed from this state, guaranteeing a re-render whenever files update
-- This replaces the current inline computation (lines 244-246)
+| Row                 | Color  | Value                             | Badge           |
+| ------------------- | ------ | --------------------------------- | --------------- |
+| Critical Gaps       | Red    | criticalCount / totalGaps         | "High Severity" |
+| High Confidence     | Blue   | highConfidenceCount / totalGaps % | "AI Validated"  |
+| Section Coverage    | Green  | sectionsCount / 12                | "Completeness"  |
+| Confidence Ratio    | Purple | highConfidence% vs moderate split | "Reliability"   |
+| Gap Resolution Rate | Teal   | resolvedCount / totalGaps         | "Progress"      |
 
-### 4. Remove `replaceSectionInSQAP` Function
 
-**File:** `src/pages/Workspace.tsx`
+### Section C: Three Flip Counter Cards
 
-Delete the `replaceSectionInSQAP` helper function (lines 437-460) as it is no longer needed with the full-document optimizer approach.
+- Each card shows a number with a slot-machine digit-flip animation on mount (CSS `@keyframes flip-digit` using rotateX transform)
+- After loading, each card has a breathing glow pulse on its border (`@keyframes breathe-glow`)
+- Dark mode: neon border glow in respective color
+- Light mode: colored `box-shadow` pulse (Apple-style depth)
+
+
+| Counter  | Color       | Value         |
+| -------- | ----------- | ------------- |
+| Critical | Red tint    | criticalCount |
+| Moderate | Yellow tint | moderateCount |
+| Sections | Neutral     | sectionsCount |
+
 
 ---
 
-## Technical Details
+## 2. Modify: `src/pages/Workspace.tsx`
 
-### Edge Function Prompt Change
+- Remove the `ScoreGauge` function component (lines 112-155)
+- Add import: `import AuditDashboard from "@/components/AuditDashboard"`
+- Replace line 849 (`<ScoreGauge score={...} grade={...} />`) with:
+`<AuditDashboard score={currentProject.score} grade={currentProject.grade} auditResult={activeAudit} sectionsCount={sections.length} />`
 
-The `OPTIMIZER_PROMPT` constant will change from:
+---
 
-> "Fix the following security or technical flaw... Output the corrected section content in Markdown format (without the ## heading) that can replace the flawed section."
+## 3. CSS Additions in `src/index.css`
 
-To:
+Add keyframes and utility classes:
 
-> "You are a Security Architect. You will receive a complete SQAP document and a specific flaw to fix. You MUST output the ENTIRE document with the fix merged into the relevant section. Never remove or omit any existing sections, headings, or content. Append or intelligently merge new technical requirements under the appropriate headers. Output the full corrected SQAP in Markdown format."
+- `@keyframes rotate-glow` -- 360deg rotation over 4s linear infinite
+- `@keyframes shimmer` -- translateX(-100% to 200%) over 2s ease infinite
+- `@keyframes breathe-glow` -- box-shadow pulse opacity 0.4 to 1 over 2s ease-in-out infinite
+- `@keyframes flip-digit` -- rotateX(0 to 360) over 0.6s
+- `.dark` variants for neon colors vs light mode soft shadows
 
-### handleFix Flow (After)
+---
 
-```text
-1. Call optimizer with full SQAP + risk details
-2. Receive complete merged SQAP back
-3. Update project: sqap = mergedSqap, files = buildFiles(mergedSqap)
-4. Left panel re-renders immediately via useEffect
-5. Re-run audit on the merged SQAP
-6. Update project again with audit results + rebuilt files
-```
+## Technical Notes
 
-### useEffect Addition
-
-```text
-- Watch: currentProject?.files
-- Extract: SQAP.md content from files array, fallback to currentProject.sqap
-- Set: local state variable that drives sections computation
-- Result: Accordion always reflects latest file content
-```
-
+- All animations use CSS (no framer-motion dependency needed)
+- The SVG gradient for the ring uses `<linearGradient>` with two stops, applied to the stroke
+- The rotating outer glow is a second SVG circle with lower opacity and a CSS `rotate-glow` animation
+- Bar shimmer uses an `::after` pseudo-element with a white-to-transparent gradient sweeping across
+- Flip counters use a `useEffect` with `setTimeout` cascade to trigger digit changes with rotateX transitions
+- Dark/light mode detection via Tailwind's `dark:` prefix classes throughout  
+  
+"For Gap Resolution Rate, compute resolvedCount as the number of risks where `isFixing === true` has completed, or simply show 0/totalGaps with the bar empty and a label that says 'Fix issues to track progress' — so it looks intentional rather than broken."  
+  
+Confirm:
+  - That it creates `AuditDashboard.tsx` as a new file, not inline in Workspace.tsx
+  - That it removes `ScoreGauge` entirely and doesn't leave it as dead code

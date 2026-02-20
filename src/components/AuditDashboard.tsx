@@ -19,9 +19,9 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
   const moderateCount = risks.filter((r: Risk) => r.severity === "moderate").length;
   const totalGaps = criticalCount + moderateCount;
   const highConfidenceCount = risks.filter((r: Risk) => r.confidence === "high").length;
-  const resolvedCount = 0; // placeholder for future
+  const normalConfidenceCount = risks.filter((r: Risk) => r.confidence !== "high").length;
+  const resolvedCount = 0;
 
-  // Animate score count-up
   useEffect(() => {
     let frame: number;
     let start: number | null = null;
@@ -32,32 +32,27 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
       setAnimatedScore(Math.round(progress * score));
       if (progress < 1) frame = requestAnimationFrame(animate);
     };
-    const timer = setTimeout(() => {
-      frame = requestAnimationFrame(animate);
-    }, 200);
-    return () => {
-      clearTimeout(timer);
-      cancelAnimationFrame(frame);
-    };
+    const timer = setTimeout(() => { frame = requestAnimationFrame(animate); }, 200);
+    return () => { clearTimeout(timer); cancelAnimationFrame(frame); };
   }, [score]);
 
-  // Trigger bars after ring animation
   useEffect(() => {
     const t = setTimeout(() => setBarsVisible(true), 800);
     return () => clearTimeout(t);
   }, []);
 
-  // Trigger counters after bars
   useEffect(() => {
     const t = setTimeout(() => setCountersReady(true), 1200);
     return () => clearTimeout(t);
   }, []);
 
-  const radius = 80;
+  const radius = 90;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (animatedScore / 100) * circumference;
 
-  // Metric bar data
+  const confidenceTotal = highConfidenceCount + normalConfidenceCount;
+  const confidenceRatioValue = confidenceTotal > 0 ? highConfidenceCount / confidenceTotal : 0;
+
   const bars = [
     {
       label: "Critical Gaps",
@@ -82,10 +77,12 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
     },
     {
       label: "Confidence Ratio",
-      value: totalGaps > 0 ? highConfidenceCount / totalGaps : 0,
-      display: `${totalGaps > 0 ? Math.round((highConfidenceCount / totalGaps) * 100) : 0}%`,
+      value: confidenceRatioValue,
+      display: `${highConfidenceCount} High / ${normalConfidenceCount} Moderate`,
       badge: "Reliability",
       colorClass: "audit-bar-purple",
+      isSplit: true,
+      splitParts: { high: highConfidenceCount, normal: normalConfidenceCount },
     },
     {
       label: "Gap Resolution Rate",
@@ -101,12 +98,9 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
     <div className="space-y-6">
       {/* Section A: Glowing Circular Ring */}
       <div className="flex flex-col items-center">
-        <div className="relative w-[200px] h-[200px]">
-          {/* Rotating outer glow */}
+        <div className="relative w-[220px] h-[220px]">
           <svg
-            width="200"
-            height="200"
-            viewBox="0 0 200 200"
+            width="220" height="220" viewBox="0 0 220 220"
             className="absolute inset-0 audit-ring-glow-rotate"
           >
             <defs>
@@ -120,20 +114,15 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
               </linearGradient>
             </defs>
             <circle
-              cx="100"
-              cy="100"
-              r={radius + 6}
+              cx="110" cy="110" r={radius + 8}
               fill="none"
-              className="stroke-[hsl(217,91%,60%)]/20 dark:stroke-[hsl(185,96%,55%)]/30"
-              strokeWidth="4"
-              style={{
-                filter: "blur(3px)",
-              }}
+              className="stroke-[hsl(217,91%,60%)]/30 dark:stroke-[hsl(185,96%,55%)]/40"
+              strokeWidth="5"
+              style={{ filter: "blur(4px)" }}
             />
           </svg>
 
-          {/* Main ring */}
-          <svg width="200" height="200" viewBox="0 0 200 200" className="-rotate-90 relative z-10">
+          <svg width="220" height="220" viewBox="0 0 220 220" className="-rotate-90 relative z-10 audit-ring-svg">
             <defs>
               <linearGradient id="ring-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="hsl(217, 91%, 60%)" />
@@ -144,20 +133,9 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
                 <stop offset="100%" stopColor="hsl(270, 80%, 60%)" />
               </linearGradient>
             </defs>
+            <circle cx="110" cy="110" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" opacity="0.3" />
             <circle
-              cx="100"
-              cy="100"
-              r={radius}
-              fill="none"
-              stroke="hsl(var(--muted))"
-              strokeWidth="12"
-              opacity="0.3"
-            />
-            <circle
-              cx="100"
-              cy="100"
-              r={radius}
-              fill="none"
+              cx="110" cy="110" r={radius} fill="none"
               className="audit-ring-stroke"
               strokeWidth="12"
               strokeDasharray={circumference}
@@ -167,9 +145,8 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
             />
           </svg>
 
-          {/* Center text */}
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-            <span className="text-5xl font-bold text-foreground tabular-nums">{animatedScore}</span>
+            <span className="text-6xl font-bold text-foreground tabular-nums">{animatedScore}</span>
             <span className="text-sm font-semibold text-muted-foreground">{grade}</span>
             <span className="text-xs text-muted-foreground mt-1">Completeness Score</span>
           </div>
@@ -191,15 +168,34 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{bar.badge}</Badge>
               </div>
             </div>
-            <div className="relative h-2 rounded-full bg-muted overflow-hidden">
-              <div
-                className={`absolute inset-y-0 left-0 rounded-full ${bar.colorClass} audit-bar-shimmer`}
-                style={{
-                  width: barsVisible ? `${Math.max(bar.value * 100, 2)}%` : "0%",
-                  transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
-                }}
-              />
-            </div>
+            {bar.isSplit && bar.splitParts ? (
+              <div className="relative h-2 rounded-full bg-muted overflow-hidden flex">
+                <div
+                  className="audit-bar-purple audit-bar-shimmer rounded-l-full"
+                  style={{
+                    width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.high / confidenceTotal) * 100 : 0}%` : "0%",
+                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                  }}
+                />
+                <div
+                  className="bg-muted-foreground/30 rounded-r-full"
+                  style={{
+                    width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.normal / confidenceTotal) * 100 : 0}%` : "0%",
+                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full ${bar.colorClass} audit-bar-shimmer`}
+                  style={{
+                    width: barsVisible ? `${Math.max(bar.value * 100, 2)}%` : "0%",
+                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                  }}
+                />
+              </div>
+            )}
             {bar.emptyLabel && bar.value === 0 && (
               <p className="text-[10px] text-muted-foreground mt-1 italic">{bar.emptyLabel}</p>
             )}
@@ -228,19 +224,16 @@ function FlipCard({ label, value, ready, colorClass }: { label: string; value: n
     const step = Math.max(1, Math.floor(target / 10));
     const interval = setInterval(() => {
       current += step;
-      if (current >= target) {
-        current = target;
-        clearInterval(interval);
-      }
+      if (current >= target) { current = target; clearInterval(interval); }
       setDisplayValue(current);
     }, 60);
     return () => clearInterval(interval);
   }, [ready, value]);
 
   return (
-    <div className={`rounded-xl border bg-card p-4 flex flex-col items-center gap-1 shadow-sm ${colorClass} ${ready ? "audit-counter-breathe" : ""}`}>
+    <div className={`rounded-xl border p-6 flex flex-col items-center gap-2 shadow-sm ${colorClass} ${ready ? "audit-counter-breathe" : ""}`}>
       <span
-        className="text-3xl font-bold tabular-nums text-foreground"
+        className="text-4xl font-bold tabular-nums text-foreground"
         style={{
           transform: ready ? "rotateX(0deg)" : "rotateX(90deg)",
           transition: "transform 0.6s ease-out",

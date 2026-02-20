@@ -96,6 +96,15 @@
   }
 }
 
+/* Scrollbar hide utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* AuditDashboard Animations */
 
 @keyframes rotate-glow {
@@ -127,6 +136,14 @@
 .dark .audit-ring-stroke {
   stroke: url(#ring-gradient-dark);
   filter: drop-shadow(0 0 10px hsl(185 96% 55% / 0.5)) drop-shadow(0 0 20px hsl(270 80% 60% / 0.3));
+}
+
+/* Ring SVG neon bloom in dark mode */
+.audit-ring-svg {
+  filter: drop-shadow(0 0 4px hsl(217 91% 60% / 0.2));
+}
+.dark .audit-ring-svg {
+  filter: drop-shadow(0 0 12px hsl(185 96% 55% / 0.4)) drop-shadow(0 0 24px hsl(270 80% 60% / 0.25)) drop-shadow(0 0 40px hsl(185 96% 55% / 0.15));
 }
 
 /* Bar colors */
@@ -167,28 +184,34 @@
 /* Counter card colors */
 .audit-counter-red {
   --breathe-color: hsl(0 84% 60% / 0.3);
-  border-color: hsl(0 84% 60% / 0.2);
+  border-color: hsl(0 84% 60% / 0.3);
+  background: hsl(0 84% 95%);
 }
 .dark .audit-counter-red {
   --breathe-color: hsl(0 84% 60% / 0.5);
-  border-color: hsl(0 84% 60% / 0.3);
+  border-color: hsl(0 84% 60% / 0.4);
+  background: hsl(0 50% 12% / 0.4);
 }
 
 .audit-counter-yellow {
   --breathe-color: hsl(38 92% 50% / 0.3);
-  border-color: hsl(38 92% 50% / 0.2);
+  border-color: hsl(38 92% 50% / 0.3);
+  background: hsl(38 92% 95%);
 }
 .dark .audit-counter-yellow {
   --breathe-color: hsl(38 92% 50% / 0.5);
-  border-color: hsl(38 92% 50% / 0.3);
+  border-color: hsl(38 92% 50% / 0.4);
+  background: hsl(38 50% 12% / 0.4);
 }
 
 .audit-counter-neutral {
   --breathe-color: hsl(var(--muted-foreground) / 0.2);
   border-color: hsl(var(--border));
+  background: hsl(var(--muted));
 }
 .dark .audit-counter-neutral {
   --breathe-color: hsl(var(--muted-foreground) / 0.3);
+  background: hsl(var(--muted) / 0.4);
 }
 
 .audit-counter-breathe {

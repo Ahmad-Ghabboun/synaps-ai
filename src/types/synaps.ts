@@ -9,6 +9,15 @@ export interface Risk {
   isFixing?: boolean;
 }
 
+export interface SyncItem {
+  id: string;
+  externalId?: string;
+  provider: string; // e.g., 'google', 'notion'
+  status: 'synced' | 'pending' | 'error';
+  lastSyncedAt: string;
+  data: any;
+}
+
 export interface AuditResult {
   qualityScore: number;
   grade: string;

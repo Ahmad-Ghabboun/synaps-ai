@@ -924,42 +924,45 @@ export default function Workspace() {
         </section>
       </div>
 
-      {/* Fixed Input Dock (non-floating) */}
+      {/* Fixed Input Dock */}
       <div className="shrink-0 border-t border-border bg-card px-6 py-4">
-        <div className="max-w-full flex gap-3 items-end">
-          <button className="shrink-0 p-2 hover:bg-muted rounded-lg transition-colors" aria-label="Attach file">
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-          </button>
-          <textarea
-            ref={textareaRef}
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => {
-              if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                e.preventDefault();
-                launchEngine();
-              }
-            }}
-            placeholder="Describe your project in detail..."
-            className="flex-1 resize-none bg-transparent border border-input rounded-lg outline-none text-foreground placeholder:text-muted-foreground text-sm min-h-[48px] max-h-[120px] px-3 py-2 focus-visible:ring-2 focus-visible:ring-ring"
-            rows={2}
-          />
-          <Button
-            onClick={launchEngine}
-            disabled={isAnyLoading}
-            className="shrink-0 px-6"
-          >
-            {isAnyLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <>
-                <Send className="h-4 w-4 mr-1" />
-                LAUNCH ENGINE
-              </>
-            )}
-          </Button>
+        <div className="max-w-full">
+          <div className="flex items-end gap-2 border border-input rounded-xl bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
+            <button
+              className="shrink-0 p-3 hover:bg-muted rounded-lg transition-colors mb-1"
+              aria-label="Attach file"
+              onClick={() => uploadRef.current?.click()}
+            >
+              <Paperclip className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <textarea
+              ref={textareaRef}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                  e.preventDefault();
+                  launchEngine();
+                }
+              }}
+              placeholder="Describe your project in detail..."
+              className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[120px] py-1"
+              rows={2}
+            />
+            <button
+              onClick={launchEngine}
+              disabled={isAnyLoading}
+              className="shrink-0 mb-1 p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {isAnyLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
         </div>
-        <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

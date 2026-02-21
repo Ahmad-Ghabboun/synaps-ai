@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Home, LayoutGrid, Users, Settings, Sparkles } from "lucide-react";
+import { Home, LayoutGrid, Users, Settings } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import SettingsDialog from "@/components/SettingsDialog";
 

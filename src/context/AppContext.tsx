@@ -15,7 +15,7 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
-  demoMode: false,
+  demoMode: true,
   showRawJson: false,
 };
 
@@ -51,7 +51,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_LOADING":
       return { ...state, isLoading: { ...state.isLoading, ...action.loading } };
     case "SET_DEMO_MODE":
-      return { ...state, demoMode: action.enabled };
+      return { ...state, demoMode: true };
     case "SET_SHOW_RAW_JSON":
       return { ...state, showRawJson: action.enabled };
     default:
@@ -80,10 +80,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         dispatch({ type: "SET_PROJECTS", projects: SAMPLE_PROJECTS });
       }
-      const demoMode = localStorage.getItem("synaps_demo_mode");
-      if (demoMode === "true") {
-        dispatch({ type: "SET_DEMO_MODE", enabled: true });
-      }
+      // Demo mode is permanently enabled; no localStorage check needed
     } catch {
       dispatch({ type: "SET_PROJECTS", projects: SAMPLE_PROJECTS });
     }

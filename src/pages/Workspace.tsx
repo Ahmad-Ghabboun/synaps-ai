@@ -202,6 +202,8 @@ export default function Workspace() {
   const [settingsDropdownOpen, setSettingsDropdownOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState("");
+  const [copiedSectionIndex, setCopiedSectionIndex] = useState<number | null>(null);
+  const [isCopiedWhole, setIsCopiedWhole] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
   
@@ -582,9 +584,19 @@ export default function Workspace() {
 
 
 
-  function handleCopySection(content: string) {
+  function handleCopySection(content: string, index: number) {
     navigator.clipboard.writeText(content);
+    setCopiedSectionIndex(index);
+    setTimeout(() => setCopiedSectionIndex(null), 2000);
     toast.success("Copied to clipboard");
+  }
+
+  function handleCopyWhole() {
+    if (!sqapContent) return;
+    navigator.clipboard.writeText(sqapContent);
+    setIsCopiedWhole(true);
+    setTimeout(() => setIsCopiedWhole(false), 2000);
+    toast.success("Full artifact copied to clipboard");
   }
 
   function handleDownloadFile(file: FileObject) {
@@ -736,6 +748,16 @@ export default function Workspace() {
               }}>
                 <Download className="h-4 w-4 mr-1" /> Download
               </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!sqapContent}
+                onClick={handleCopyWhole}
+                className="w-9 px-0"
+                title="Copy entire artifact"
+              >
+                {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
             </div>
           </div>
 
@@ -749,15 +771,19 @@ export default function Workspace() {
               <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
                 {sections.map((section, i) => (
                   <AccordionItem key={i} value={`section-${i}`}>
-                    <AccordionTrigger className="hover:no-underline">
+                    <AccordionTrigger className="hover:no-underline group">
                       <div className="flex items-center gap-2">
                         <span className="text-base font-bold">{section.title}</span>
                         <button
-                          onClick={(e) => { e.stopPropagation(); handleCopySection(section.content); }}
+                          onClick={(e) => { e.stopPropagation(); handleCopySection(section.content, i); }}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
                           aria-label={`Copy ${section.title}`}
                         >
-                          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          {copiedSectionIndex === i ? (
+                            <Check className="h-3.5 w-3.5 text-green-500" />
+                          ) : (
+                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                          )}
                         </button>
                       </div>
                     </AccordionTrigger>

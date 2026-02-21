@@ -295,6 +295,14 @@ export default function Workspace() {
     }
   }, [darkMode]);
 
+  useEffect(() => {
+    const handleThemeChange = () => {
+      setDarkMode(document.documentElement.classList.contains("dark"));
+    };
+    window.addEventListener("theme-change", handleThemeChange);
+    return () => window.removeEventListener("theme-change", handleThemeChange);
+  }, []);
+
   // Handle incoming prompt from dashboard
   useEffect(() => {
     if (location.state?.initialPrompt) {

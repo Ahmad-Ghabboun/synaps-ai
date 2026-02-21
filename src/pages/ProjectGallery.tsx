@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Send, Copy } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Send, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { useApp } from "@/context/AppContext";
 import { Project, Persona } from "@/types/synaps";
@@ -152,8 +152,127 @@ function ProjectCard({ project }: { project: Project }) {
   );
 }
 
+function NoteItem({
+  note,
+  onDelete,
+  onUpdate,
+  onUseInPrompt,
+  projects,
+}: {
+  note: SyncNote;
+  onDelete: (id: string) => void;
+  onUpdate: (id: string, content: string) => Promise<void>;
+  onUseInPrompt: (content: string, projectId: string) => void;
+  projects: Project[];
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState(note.content);
+  const [isPromptMode, setIsPromptMode] = useState(false);
+
+  const handleSave = async () => {
+    await onUpdate(note.id, editContent);
+    setIsEditing(false);
+  };
+
+  return (
+    <div
+      className={cn(
+        "group relative bg-background border border-border rounded-xl p-3 hover:shadow-sm transition-all duration-200",
+        isExpanded ? "h-auto" : "h-[70px] overflow-hidden"
+      )}
+    >
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20 flex items-center gap-0 bg-background/80 backdrop-blur-sm rounded-md pl-1">
+        <button
+          onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
+          className="p-1 text-muted-foreground hover:text-foreground"
+        >
+          {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 hover:bg-muted rounded-md h-6 w-6 flex items-center justify-center">
+              <MoreVertical className="h-3 w-3 text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => { setIsEditing(true); setIsExpanded(true); }}>
+              <Pencil className="h-3 w-3 mr-2" /> Edit
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { setIsPromptMode(true); setIsExpanded(true); }}>
+              <Copy className="h-3 w-3 mr-2" /> Use in Prompt
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive" onClick={() => onDelete(note.id)}>
+              <Trash2 className="h-3 w-3 mr-2" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {isEditing ? (
+        <div className="space-y-2 h-full flex flex-col">
+          <Textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="flex-1 min-h-[60px] text-xs resize-none"
+          />
+          <div className="flex justify-end gap-2 shrink-0">
+            <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="h-7 text-xs px-2">Cancel</Button>
+            <Button size="sm" onClick={handleSave} className="h-7 text-xs px-2">Save</Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col h-full">
+          <p className={cn(
+            "text-sm text-foreground whitespace-pre-wrap break-words pr-14",
+            !isExpanded && "line-clamp-1"
+          )}>
+            {note.content}
+          </p>
+
+          {isPromptMode ? (
+            <div className="mt-2 space-y-2 animate-in fade-in zoom-in-95 duration-200">
+              <Select onValueChange={(val) => onUseInPrompt(note.content, val)}>
+                <SelectTrigger className="w-full h-8 text-xs">
+                  <SelectValue placeholder="Select project..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">
+                  {format(new Date(note.created_at), "MMM d, h:mm a")}
+                </span>
+                <button onClick={() => setIsPromptMode(false)} className="text-xs text-muted-foreground hover:text-foreground font-medium">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between mt-auto pt-2">
+              <span className="text-xs text-muted-foreground">
+                {format(new Date(note.created_at), "MMM d, h:mm a")}
+              </span>
+              <button
+                onClick={() => { setIsPromptMode(true); setIsExpanded(true); }}
+                className="flex items-center gap-1 text-xs text-primary hover:underline"
+              >
+                <Copy className="h-3 w-3" /> Use in Prompt
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MobileNotesPanel() {
   const navigate = useNavigate();
+  const { state, dispatch } = useApp();
   const [notes, setNotes] = useState<SyncNote[]>([]);
   const [newNote, setNewNote] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -195,32 +314,43 @@ function MobileNotesPanel() {
     }
   };
 
-  const handleUseInPrompt = (content: string) => {
+  const handleDeleteNote = async (id: string) => {
+    try {
+      const { error } = await (supabase as any).from("sync_items").delete().eq("id", id);
+      if (error) throw error;
+      setNotes((prev) => prev.filter((n) => n.id !== id));
+      toast.success("Note deleted");
+    } catch {
+      toast.error("Failed to delete note");
+    }
+  };
+
+  const handleUpdateNote = async (id: string, content: string) => {
+    if (!content.trim()) return;
+    try {
+      const { error } = await (supabase as any).from("sync_items").update({ content: content.trim() }).eq("id", id);
+      if (error) throw error;
+      setNotes((prev) => prev.map((n) => (n.id === id ? { ...n, content: content.trim() } : n)));
+      toast.success("Note updated");
+    } catch {
+      toast.error("Failed to update note");
+    }
+  };
+
+  const handleUseInPrompt = (content: string, projectId: string) => {
+    const project = state.projects.find((p) => p.id === projectId);
+    if (!project) return;
+    dispatch({ type: "SET_CURRENT_PROJECT", id: projectId });
     navigate("/workspace", { state: { initialPrompt: content } });
   };
 
   return (
-    <aside className="hidden xl:flex flex-col w-80 border-l border-border bg-card sticky top-0 h-screen overflow-y-auto scrollbar-hide">
-      <div className="p-4 border-b border-border">
-        <h2 className="text-lg font-bold text-foreground mb-3">Mobile Notes</h2>
-        <div className="flex gap-2">
-          <textarea
-            value={newNote}
-            onChange={(e) => setNewNote(e.target.value)}
-            placeholder="Type a note from desktop..."
-            className="flex-1 bg-muted rounded-lg p-2 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[60px] scrollbar-hide"
-          />
-          <button
-            onClick={handleSaveNote}
-            disabled={isSaving || !newNote.trim()}
-            className="p-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors self-end"
-          >
-            <Send className="h-4 w-4" />
-          </button>
-        </div>
+    <aside className="hidden xl:flex flex-col w-80 border border-border bg-card shadow-sm rounded-2xl sticky top-6 h-[calc(100vh-3rem)] mr-6 overflow-hidden">
+      <div className="p-4 border-b border-border shrink-0">
+        <h2 className="text-lg font-bold text-foreground">Mobile Notes</h2>
       </div>
 
-      <div className="flex-1 p-4 space-y-3">
+      <div className="flex-1 p-4 space-y-3 overflow-y-auto scrollbar-hide">
         {notes.length === 0 ? (
           <div className="text-center text-muted-foreground text-sm py-8">
             <p>No notes yet.</p>
@@ -228,22 +358,34 @@ function MobileNotesPanel() {
           </div>
         ) : (
           notes.map((note) => (
-            <div key={note.id} className="bg-background border border-border rounded-xl p-3">
-              <p className="text-sm text-foreground whitespace-pre-wrap mb-2 line-clamp-4">{note.content}</p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-muted-foreground">
-                  {format(new Date(note.created_at), "MMM d, h:mm a")}
-                </span>
-                <button
-                  onClick={() => handleUseInPrompt(note.content)}
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
-                >
-                  <Copy className="h-3 w-3" /> Use in Prompt
-                </button>
-              </div>
-            </div>
+            <NoteItem
+              key={note.id}
+              note={note}
+              onDelete={handleDeleteNote}
+              onUpdate={handleUpdateNote}
+              onUseInPrompt={handleUseInPrompt}
+              projects={state.projects}
+            />
           ))
         )}
+      </div>
+
+      <div className="p-4 border-t border-border shrink-0">
+        <div className="relative w-full">
+          <textarea
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            placeholder="Type a note from desktop..."
+            className="w-full bg-muted rounded-lg p-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[80px] scrollbar-hide"
+          />
+          <button
+            onClick={handleSaveNote}
+            disabled={isSaving || !newNote.trim()}
+            className="absolute bottom-3 right-3 p-1 text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+          >
+            <Send className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </aside>
   );

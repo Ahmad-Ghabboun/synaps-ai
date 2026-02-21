@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import synapsWordmark from "@/assets/synaps-wordmark.png";
 import { Plus, Trash2, Send, X, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -99,7 +100,7 @@ export default function MobileSync() {
   return (
     <div className="min-h-screen bg-background flex flex-col max-w-lg mx-auto">
       <div className="bg-card border-b border-border px-6 py-5 flex items-center justify-between sticky top-0 z-10">
-        <span className="text-2xl font-bold text-primary">SYNAPS</span>
+        <img src={synapsWordmark} alt="SYNAPS" className="h-8 object-contain" />
         <span className="text-sm text-muted-foreground font-medium">Notes</span>
       </div>
 

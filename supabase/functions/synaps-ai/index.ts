@@ -1,5 +1,3 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -123,8 +121,13 @@ async function callLLM(systemPrompt: string, userMessage: string, apiKey: string
     throw { status: response.status, message: `AI gateway error: ${errorText}` };
   }
 
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+  try {
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || "";
+  } catch (e) {
+    console.error("Failed to parse LLM response:", e);
+    throw { status: 500, message: "Failed to parse AI response" };
+  }
 }
 
 function parseAuditJson(raw: string) {
@@ -133,7 +136,7 @@ function parseAuditJson(raw: string) {
   return JSON.parse(jsonMatch[0]);
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -142,7 +145,10 @@ serve(async (req) => {
     const body = await req.json();
     const { skill, description, sqap, section, title, description: riskDesc, persona, deadline } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    if (!LOVABLE_API_KEY) {
+      console.error("LOVABLE_API_KEY is not set");
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
 
     let result: any;
 

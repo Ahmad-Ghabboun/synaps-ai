@@ -7,6 +7,7 @@ import { AppProvider } from "@/context/AppContext";
 import ProjectGallery from "./pages/ProjectGallery";
 import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
+import MobileSync from "./pages/MobileSync";
 
 const queryClient = new QueryClient();
 
@@ -20,6 +21,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<ProjectGallery />} />
             <Route path="/workspace" element={<Workspace />} />
+            <Route path="/mobile" element={<MobileSync />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

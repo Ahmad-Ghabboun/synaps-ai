@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import { Home, LayoutGrid, Users, Settings, Sparkles } from "lucide-react";
+import { Home, LayoutGrid, Users, Settings } from "lucide-react";
+import logo from "@/assets/logo.png";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import SettingsDialog from "@/components/SettingsDialog";
 
@@ -16,8 +17,8 @@ export default function DashboardSidebar() {
     <>
       <aside className="w-16 h-screen sticky top-0 flex flex-col items-center py-4 gap-2 bg-card border-r border-border shrink-0">
         {/* Logo */}
-        <div className="w-10 h-10 flex items-center justify-center rounded-xl bg-primary/10 text-primary mb-4">
-          <Sparkles className="h-5 w-5" />
+        <div className="w-10 h-10 flex items-center justify-center rounded-xl mb-4 overflow-hidden">
+          <img src={logo} alt="Logo" className="h-7 w-7 object-contain" />
         </div>
 
         {/* Nav Items */}

@@ -1,63 +1,88 @@
-# Fix AuditDashboard: Metrics, Counter Cards, Scrollbar & Ring
 
-## 1. Fix Metric Calculations in `src/components/AuditDashboard.tsx`
 
-**High Confidence bar** (index 1): Change value from `highConfidenceCount / totalGaps` to `highConfidenceCount / totalGaps` (already correct ratio), but fix display to `${totalGaps > 0 ? Math.round((highConfidenceCount / totalGaps) * 100) : 0}%` -- this is already done. No change needed here.
+# Redesign Dashboard (ProjectGallery) with Sidebar Navigation
 
-**Confidence Ratio bar** (index 3): Currently uses the same formula as High Confidence. Change to:
+## Overview
 
-- Compute `normalConfidenceCount = totalGaps - highConfidenceCount`
-- Value: `highConfidenceCount / (highConfidenceCount + normalConfidenceCount)` which simplifies to `highConfidenceCount / totalGaps` -- actually identical. Per the user's intent, the ratio should be `highConfidenceCount / (highConfidenceCount + normalConfidenceCount)` where normalConfidenceCount specifically counts risks where confidence is NOT "high". Update the computation to use an explicit `normalConfidenceCount` variable for clarity and correctness.
+Redesign `src/pages/ProjectGallery.tsx` to match the reference image: add a narrow icon sidebar on the left, redesign project cards with progress bars, and replace the hero "Create New Project" section with a dashed "New Project" card in the grid.
 
-**NaN guard**: All percentage displays already guard with `totalGaps > 0 ? ... : 0`. Verify and ensure this is consistent.
+**Note:** The app routes `/` to `ProjectGallery.tsx` (not `Index.tsx`), so all changes target that file plus a new sidebar component.
 
-## 2. Redesign Counter Cards
+---
 
-Update the `FlipCard` component and the counter card section to match the reference image:
+## Changes
 
-- **Taller cards** with more padding (`p-6` instead of `p-4`)
-- **Horizontal layout** inside each card: slot-machine number on left, label text on right (matching reference)
-- **Red card**: `bg-red-950/40 border-red-500/50` with red breathing glow
-- **Yellow/Amber card**: `bg-amber-950/40 border-amber-500/50` with amber breathing glow  
-- **Neutral card**: `bg-muted/40 border-border` with subtle glow
-- Light mode variants: softer tints (`bg-red-50 border-red-200`, etc.)
-- All cards get the `audit-counter-breathe` animation class immediately after flip completes
+### 1. New File: `src/components/DashboardSidebar.tsx`
 
-## 3. Hide Scrollbars
+A narrow 64px icon-only sidebar with:
+- **Synaps logo** at top (Sparkles icon from lucide-react as brand icon)
+- **Nav items** with Tooltip on hover:
+  - Dashboard (Home icon) -- active, highlighted
+  - Projects (LayoutGrid icon) -- links to `/`
+  - Team (Users icon) -- placeholder/disabled
+  - Settings (Settings icon) -- opens SettingsDialog
+- Each icon is a 40x40 rounded button, active state gets `bg-primary/10 text-primary`
+- Sidebar uses `bg-card border-r border-border` in both modes
+- Settings click opens the existing `SettingsDialog` component (reused from Workspace)
 
-Add to `src/index.css`:
+### 2. Redesign `src/pages/ProjectGallery.tsx`
 
-```css
-.scrollbar-hide {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+**Layout:**
+- Wrap page in a flex row: `<DashboardSidebar />` on left + main content area on right
+- Remove the old header with "SYNAPS | Project Quality Assurance Intelligence" subtitle
+- Add a simple "Dashboard" title at top left of the main content area
+
+**Project Cards -- redesigned:**
+- Project name bold at top left
+- Three-dot menu (MoreVertical) at top right (reuse existing rename/delete dropdown)
+- Progress bar below name showing `project.score`% with color-coded fill (reuse existing `scoreColor`)
+- Score text below bar: `"{score}% Complete"` or `"Not yet audited"` if score is 0 and no auditResult
+- Last edited date at bottom in muted text: `"Edited {date}"`
+- Remove description text and deadline badges from cards
+- Remove the large score number display
+
+**New Project card:**
+- Remove the hero "Create New Project" button/section
+- Insert a "New Project" card as the **first item** in the grid
+- Dashed border, Plus icon centered, "New Project" label below
+- Clicking opens the existing create project modal (reuse all existing modal logic)
+
+### 3. No changes needed to other files
+
+The SettingsDialog is already a standalone component that accepts `open` and `onOpenChange` props, so it can be reused directly in the sidebar.
+
+---
+
+## Technical Details
+
+### DashboardSidebar Component
+
+```text
+Props: none (uses internal state for settings dialog)
+Width: w-16 (64px), fixed height: h-screen, sticky
+Icons: Home, LayoutGrid, Users, Settings from lucide-react
+Tooltips: Uses existing Tooltip component from @/components/ui/tooltip
+Settings: Opens SettingsDialog with local useState
 ```
 
-Apply `scrollbar-hide` class to the two `overflow-y-auto` containers in `Workspace.tsx`:
+### Card Layout Changes
 
-- Left panel: line 742 (`flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto`)
-- Right panel: line 802 (`flex-1 overflow-y-auto mt-4`)
+```text
+Before:
+  - Name + deadline badge
+  - Time ago text
+  - Progress bar
+  - Large score number
 
-## 4. Fix Circular Ring to Match Reference
+After:
+  - Name (left) + three-dot menu (right)
+  - Progress bar (color-coded)
+  - "X% Complete" or "Not yet audited"
+  - "Edited {formatted date}" in muted text at bottom
+```
 
-Update the ring SVG in `AuditDashboard.tsx`:
+### Files Modified
 
-- **Gradient stroke**: Already uses `linearGradient` with cyan-to-purple (dark) and blue-to-indigo (light). Verify the gradient IDs are applied correctly to the main stroke circle.
-- **Outer rotating halo**: The existing rotating glow circle needs to be more visible -- increase stroke opacity and width to create the double-ring halo seen in the reference (a bright inner ring + a softer outer ring rotating behind it).
-- **Score text**: Increase to `text-6xl` font-bold, ensure `text-white` in dark mode via `dark:text-white`.
-- **Grade label**: Already shown below score. Add "Completeness Score" subtitle.
-- **Neon bloom in dark mode**: Add stronger `filter: drop-shadow` values to the SVG in dark mode -- multiple layered drop-shadows for the bloom effect.
-- **Ring size**: Increase from 200x200 to 220x220 with radius 90 for more visual impact.
-- **Dark background inside ring**: The ring center should be transparent (already is since it's just overlaid on the card background).
+1. **`src/components/DashboardSidebar.tsx`** -- new file, icon sidebar with settings integration
+2. **`src/pages/ProjectGallery.tsx`** -- redesigned layout, cards, and "New Project" placement
 
-## Files Modified
-
-1. `**src/components/AuditDashboard.tsx**` -- metric calculations, counter card redesign, ring enhancements
-2. `**src/index.css**` -- add `.scrollbar-hide` utility
-3. `src/pages/Workspace.tsx` -- add `scrollbar-hide` class to both scroll containers  
-  
-Confidence Ratio should show a SPLIT visualization — not a single bar percentage. Show two segments: High Confidence portion in purple, Moderate/Normal portion in gray, so it visually communicates the ratio between the two rather than just repeating the High Confidence percentage. Label it 'X High / Y Moderate' instead of a single percentage.

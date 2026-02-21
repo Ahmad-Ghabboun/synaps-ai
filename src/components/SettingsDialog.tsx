@@ -69,15 +69,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <div>
               <p className="text-sm font-medium text-foreground">Demo Mode</p>
               <p className="text-xs text-muted-foreground">
-                Use sample Fintech data to bypass API calls
+                Demo mode is always enabled
               </p>
             </div>
             <Switch
-              checked={state.demoMode}
-              onCheckedChange={(v) => {
-                dispatch({ type: "SET_DEMO_MODE", enabled: v });
-                localStorage.setItem("synaps_demo_mode", String(v));
-              }}
+              checked={true}
+              disabled={true}
             />
           </div>
 

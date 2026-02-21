@@ -1,3 +1,4 @@
+// FORCE_REDEPLOY_VER_2026_02_21_01
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":

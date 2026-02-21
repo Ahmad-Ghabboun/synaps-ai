@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Home, LayoutGrid, Users, Settings } from "lucide-react";
 import logo from "@/assets/logo.png";
+import logoDark from "@/assets/logo-dark.png";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import SettingsDialog from "@/components/SettingsDialog";
 
@@ -12,13 +13,20 @@ const navItems = [
 
 export default function DashboardSidebar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isDark, setIsDark] = useState(document.documentElement.classList.contains("dark"));
+
+  useEffect(() => {
+    const check = () => setIsDark(document.documentElement.classList.contains("dark"));
+    window.addEventListener("theme-change", check);
+    return () => window.removeEventListener("theme-change", check);
+  }, []);
 
   return (
     <>
       <aside className="w-16 h-screen sticky top-0 flex flex-col items-center py-4 gap-2 bg-card border-r border-border shrink-0">
         {/* Logo */}
         <div className="w-10 h-10 flex items-center justify-center rounded-xl mb-4 overflow-hidden">
-          <img alt="Logo" className="h-7 w-7 object-contain" src="/lovable-uploads/e531f254-382c-4aa5-b31d-66c255695f89.png" />
+          <img alt="Logo" className="h-7 w-7 object-contain" src={isDark ? logoDark : "/lovable-uploads/e531f254-382c-4aa5-b31d-66c255695f89.png"} />
         </div>
 
         {/* Nav Items */}

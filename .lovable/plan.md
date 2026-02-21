@@ -1,28 +1,29 @@
 
 
-# Create sync_items Table Migration
+# Replace "SYNAPS" Text with Uploaded Logo
 
 ## What
 
-Create the `sync_items` table in the database to support the Mobile Notes feature referenced in `MobileSync.tsx`.
+Replace the visible "SYNAPS" brand text in the UI with the uploaded logo image (the stylized SYNAPS wordmark with the molecular/triangle icon).
 
-## Migration SQL
+## Changes
 
-The migration will be applied using the database migration tool with the following:
+### 1. Copy the uploaded logo to the project
+- Save `user-uploads://Gemini_Generated_Image_iqqkjsiqqkjsiqqk.png` to `src/assets/synaps-wordmark.png`
 
-- **Table**: `public.sync_items`
-  - `id` -- UUID primary key (auto-generated)
-  - `content` -- text, not null
-  - `created_at` -- timestamptz, defaults to UTC now
-- **Row Level Security**: Enabled with an open policy allowing all operations
-- **Realtime**: Table added to `supabase_realtime` publication for live sync
+### 2. Update `src/pages/Workspace.tsx` (line 707)
+- Replace `<span className="text-2xl font-bold text-primary">SYNAPS</span>` with an `<img>` tag importing the new wordmark logo
+- Size it to match the previous text height (~32px tall)
 
-## Steps
+### 3. Update `src/pages/MobileSync.tsx` (line 102)
+- Same replacement: swap the `SYNAPS` text span for the wordmark image
 
-1. Use the Supabase migration tool to execute the SQL (create table, enable RLS, create policy, enable realtime)
-2. The migration is applied automatically to the connected backend
+### 4. Update `src/components/SettingsDialog.tsx` (line 54)
+- Update the description from "Configure SYNAPS preferences" to use "Configure preferences" or keep as-is since this is descriptive text, not branding (optional -- will keep the text here as it reads naturally in context)
 
-## Note
+## Technical Details
 
-The RLS policy allows unrestricted access (`using (true)`). This is appropriate for the current public notes feature but should be tightened if user-specific data or authentication is added later.
+- Import the image as an ES6 module: `import synapsWordmark from "@/assets/synaps-wordmark.png"`
+- Use `<img src={synapsWordmark} alt="SYNAPS" className="h-8 object-contain" />` to replace each text instance
+- The `h-8` class keeps the logo at roughly the same visual size as the previous `text-2xl` text
 

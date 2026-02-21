@@ -741,75 +741,119 @@ export default function Workspace() {
 
       {/* Main Content */}
       <div ref={containerRef} className={`flex-1 overflow-hidden flex flex-col lg:flex-row gap-6 lg:gap-0 p-6 ${isDragging ? "select-none cursor-col-resize" : ""}`}>
-        {/* Left Panel - The Artifact */}
-        <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
-            <div className="flex items-center gap-2">
-              <input ref={uploadRef} type="file" accept=".md,.txt,.csv" className="hidden" onChange={handleUploadFile} />
-              <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
-                <Paperclip className="h-4 w-4 mr-1" /> Upload My Own
-              </Button>
-              <Button variant="outline" size="sm" disabled={!sqapContent} onClick={() => {
-                const sqapFileObj = projectFiles.find(f => f.name === "SQAP.md");
-                if (sqapFileObj) handleDownloadFile(sqapFileObj);
-              }}>
-                <Download className="h-4 w-4 mr-1" /> Download
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={!sqapContent}
-                onClick={handleCopyWhole}
-                className="w-9 px-0"
-                title="Copy entire artifact"
-              >
-                {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-              </Button>
+        {/* Left Column Wrapper */}
+        <div className="flex-1 flex flex-col min-w-0 h-full gap-4">
+          {/* Left Panel - The Artifact */}
+          <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
+              <div className="flex items-center gap-2">
+                <input ref={uploadRef} type="file" accept=".md,.txt,.csv" className="hidden" onChange={handleUploadFile} />
+                <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
+                  <Paperclip className="h-4 w-4 mr-1" /> Upload My Own
+                </Button>
+                <Button variant="outline" size="sm" disabled={!sqapContent} onClick={() => {
+                  const sqapFileObj = projectFiles.find(f => f.name === "SQAP.md");
+                  if (sqapFileObj) handleDownloadFile(sqapFileObj);
+                }}>
+                  <Download className="h-4 w-4 mr-1" /> Download
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={!sqapContent}
+                  onClick={handleCopyWhole}
+                  className="w-9 px-0"
+                  title="Copy entire artifact"
+                >
+                  {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto scrollbar-hide min-h-[300px]">
+              {state.isLoading.architect ? (
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-muted-foreground">Generating SQAP...</p>
+                </div>
+              ) : sections.length > 0 ? (
+                <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
+                  {sections.map((section, i) => (
+                    <AccordionItem key={i} value={`section-${i}`}>
+                      <AccordionTrigger className="hover:no-underline group">
+                        <div className="flex items-center gap-2">
+                          <span className="text-base font-bold">{section.title}</span>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); handleCopySection(section.content, i); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                            aria-label={`Copy ${section.title}`}
+                          >
+                            {copiedSectionIndex === i ? (
+                              <Check className="h-3.5 w-3.5 text-green-500" />
+                            ) : (
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            )}
+                          </button>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <RenderMarkdown text={section.content} />
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                  <FileText className="h-12 w-12 mb-3 opacity-30" />
+                  <p>Generated SQAP document will appear here...</p>
+                  <p className="text-xs mt-1">Use the input below to describe your project</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Prompt Input */}
+          <div className="shrink-0">
+            <div className="max-w-full">
+              <div className="flex items-end gap-2 border border-input rounded-xl bg-card px-3 py-2 focus-within:ring-2 focus-within:ring-ring shadow-sm">
+                <button
+                  className="shrink-0 p-3 hover:bg-muted rounded-lg transition-colors mb-1"
+                  aria-label="Attach file"
+                  onClick={() => uploadRef.current?.click()}
+                >
+                  <Paperclip className="h-4 w-4 text-muted-foreground" />
+                </button>
+                <textarea
+                  ref={textareaRef}
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+                      e.preventDefault();
+                      launchEngine();
+                    }
+                  }}
+                  placeholder="Describe your project in detail..."
+                  className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[120px] py-1"
+                  rows={2}
+                />
+                <button
+                  onClick={launchEngine}
+                  disabled={isAnyLoading}
+                  className="shrink-0 mb-1 p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
+                >
+                  {isAnyLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
             </div>
           </div>
-
-          <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto scrollbar-hide min-h-[300px]">
-            {state.isLoading.architect ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-muted-foreground">Generating SQAP...</p>
-              </div>
-            ) : sections.length > 0 ? (
-              <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
-                {sections.map((section, i) => (
-                  <AccordionItem key={i} value={`section-${i}`}>
-                    <AccordionTrigger className="hover:no-underline group">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold">{section.title}</span>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleCopySection(section.content, i); }}
-                          className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
-                          aria-label={`Copy ${section.title}`}
-                        >
-                          {copiedSectionIndex === i ? (
-                            <Check className="h-3.5 w-3.5 text-green-500" />
-                          ) : (
-                            <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                          )}
-                        </button>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <RenderMarkdown text={section.content} />
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <FileText className="h-12 w-12 mb-3 opacity-30" />
-                <p>Generated SQAP document will appear here...</p>
-                <p className="text-xs mt-1">Use the input below to describe your project</p>
-              </div>
-            )}
-          </div>
-        </section>
+        </div>
 
         {/* Drag Handle */}
         <div
@@ -821,7 +865,7 @@ export default function Workspace() {
 
         {/* Right Panel - Mission Control (Tabbed) */}
         <section 
-          className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0"
+          className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0 h-full"
           style={{ width: window.innerWidth >= 1024 ? `${rightPanelWidth}%` : '100%' }}
         >
           <h2 className="text-2xl font-bold text-foreground mb-4">Mission Control</h2>
@@ -912,47 +956,6 @@ export default function Workspace() {
             </div>
           </Tabs>
         </section>
-      </div>
-
-      {/* Fixed Input Dock */}
-      <div className="shrink-0 border-t border-border bg-card px-6 py-4">
-        <div className="max-w-full">
-          <div className="flex items-end gap-2 border border-input rounded-xl bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-ring">
-            <button
-              className="shrink-0 p-3 hover:bg-muted rounded-lg transition-colors mb-1"
-              aria-label="Attach file"
-              onClick={() => uploadRef.current?.click()}
-            >
-              <Paperclip className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <textarea
-              ref={textareaRef}
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={(e) => {
-                if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-                  e.preventDefault();
-                  launchEngine();
-                }
-              }}
-              placeholder="Describe your project in detail..."
-              className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[120px] py-1"
-              rows={2}
-            />
-            <button
-              onClick={launchEngine}
-              disabled={isAnyLoading}
-              className="shrink-0 mb-1 p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-            >
-              {isAnyLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-            </button>
-          </div>
-          <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
-        </div>
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

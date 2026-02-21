@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Calendar as DeadlineIcon } from "lucide-react";
+import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { useApp } from "@/context/AppContext";
 import { Project, Persona } from "@/types/synaps";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import DashboardSidebar from "@/components/DashboardSidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,28 +36,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Updated today";
-  if (days === 1) return "Last updated: 1 day ago";
-  return `Last updated: ${days} days ago`;
-}
 
 function scoreColor(score: number) {
-  if (score >= 80) return "from-success to-success/80";
-  if (score >= 60) return "from-primary to-primary/80";
-  if (score >= 40) return "from-warning to-warning/80";
-  return "from-destructive to-destructive/80";
-}
-
-function scoreTextColor(score: number) {
-  if (score >= 80) return "text-success";
-  if (score >= 60) return "text-primary";
-  if (score >= 40) return "text-warning";
-  return "text-destructive";
+  if (score >= 80) return "bg-success";
+  if (score >= 60) return "bg-primary";
+  if (score >= 40) return "bg-warning";
+  return "bg-destructive";
 }
 
 function ProjectCard({ project }: { project: Project }) {
@@ -81,9 +66,12 @@ function ProjectCard({ project }: { project: Project }) {
     toast.success("Project deleted");
   };
 
+  const hasAudit = project.auditResult || project.score > 0;
+  const editedDate = format(new Date(project.updatedAt), "MMM d, yyyy");
+
   return (
     <article
-      className="group relative bg-card rounded-xl border border-border p-6 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200"
+      className="group relative bg-card rounded-xl border border-border p-5 shadow-sm hover:shadow-md cursor-pointer transition-all duration-200"
       onClick={() => {
         if (!isRenaming) {
           dispatch({ type: "SET_CURRENT_PROJECT", id: project.id });
@@ -100,42 +88,32 @@ function ProjectCard({ project }: { project: Project }) {
         }
       }}
     >
-      <div className="flex items-start justify-between mb-2">
-        <div className="flex flex-col gap-1 w-full pr-2">
-          {isRenaming ? (
-            <input
-              className="text-xl font-bold text-foreground bg-transparent border-b-2 border-primary outline-none w-full mr-2"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onBlur={handleRename}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleRename();
-                if (e.key === "Escape") setIsRenaming(false);
-              }}
-              onClick={(e) => e.stopPropagation()}
-              autoFocus
-            />
-          ) : (
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xl font-bold text-foreground">{project.name}</h3>
-              {/* DEADLINE PILL ADDED HERE */}
-              {project.deadline && (
-                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 flex items-center gap-1 py-0 px-2 h-5">
-                  <DeadlineIcon className="h-3 w-3" />
-                  {format(new Date(project.deadline), "MMM d, yyyy")}
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
+      {/* Header: Name + Menu */}
+      <div className="flex items-start justify-between mb-4">
+        {isRenaming ? (
+          <input
+            className="text-lg font-bold text-foreground bg-transparent border-b-2 border-primary outline-none flex-1 mr-2"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onBlur={handleRename}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") handleRename();
+              if (e.key === "Escape") setIsRenaming(false);
+            }}
+            onClick={(e) => e.stopPropagation()}
+            autoFocus
+          />
+        ) : (
+          <h3 className="text-lg font-bold text-foreground truncate pr-2">{project.name}</h3>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted"
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg hover:bg-muted shrink-0"
               onClick={(e) => e.stopPropagation()}
               aria-label="Project options"
             >
-              <MoreVertical className="h-5 w-5 text-muted-foreground" />
+              <MoreVertical className="h-4 w-4 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
@@ -149,18 +127,23 @@ function ProjectCard({ project }: { project: Project }) {
         </DropdownMenu>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-4">{timeAgo(project.updatedAt)}</p>
+      {/* Progress Bar or "Not yet audited" */}
+      {hasAudit ? (
+        <>
+          <div className="w-full h-2 bg-muted rounded-full overflow-hidden mb-2">
+            <div
+              className={`h-full rounded-full ${scoreColor(project.score)} transition-all duration-500`}
+              style={{ width: `${project.score}%` }}
+            />
+          </div>
+          <p className="text-sm font-medium text-foreground">{project.score}% Complete</p>
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground italic">Not yet audited</p>
+      )}
 
-      <div className="w-full h-3 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${scoreColor(project.score)} transition-all duration-500`}
-          style={{ width: `${project.score}%` }}
-        />
-      </div>
-
-      <p className={`text-3xl font-bold mt-3 ${scoreTextColor(project.score)}`}>
-        {project.score}%
-      </p>
+      {/* Edited date */}
+      <p className="text-xs text-muted-foreground mt-3">Edited {editedDate}</p>
     </article>
   );
 }
@@ -174,8 +157,7 @@ export default function ProjectGallery() {
   const [deadline, setDeadline] = useState<Date | undefined>();
   const [description, setDescription] = useState("");
 
-  // SORTING LOGIC: Sort projects by newest updatedAt first
-  const sortedProjects = [...state.projects].sort((a, b) => 
+  const sortedProjects = [...state.projects].sort((a, b) =>
     new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
   );
 
@@ -209,39 +191,30 @@ export default function ProjectGallery() {
   };
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto px-6 py-12">
-        <header className="mb-8">
-          <p className="text-sm text-muted-foreground mb-2 tracking-wide">
-            SYNAPS | Project Quality Assurance Intelligence
-          </p>
-          <h1 className="text-4xl font-bold text-foreground">Project Gallery</h1>
-        </header>
+    <div className="flex min-h-screen bg-background">
+      <DashboardSidebar />
 
-        {/* Hero Create Card */}
-        <button
-          onClick={() => setModalOpen(true)}
-          className="w-full bg-card rounded-2xl border-2 border-dashed border-border p-16 flex flex-col items-center justify-center hover:border-primary hover:border-solid transition-all duration-300 hover:scale-[1.01] group focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          aria-label="Create new project"
-        >
-          <div className="w-20 h-20 bg-primary rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-            <Plus className="h-10 w-10 text-primary-foreground" />
-          </div>
-          <span className="text-xl font-semibold text-foreground mt-4">Create New Project</span>
-        </button>
+      <main className="flex-1 px-8 py-8">
+        <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
 
-        {/* Recent Projects */}
-        {sortedProjects.length > 0 && (
-          <section className="mt-12" aria-label="Recent projects">
-            <h2 className="text-2xl font-bold text-foreground mb-6">Recent Projects</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {sortedProjects.map((project) => (
-                <ProjectCard key={project.id} project={project} />
-              ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* New Project Card */}
+          <button
+            onClick={() => setModalOpen(true)}
+            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border p-8 hover:border-primary hover:bg-primary/5 transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-h-[180px]"
+            aria-label="Create new project"
+          >
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Plus className="h-6 w-6 text-muted-foreground" />
             </div>
-          </section>
-        )}
-      </div>
+            <span className="text-sm font-medium text-muted-foreground">New Project</span>
+          </button>
+
+          {sortedProjects.map((project) => (
+            <ProjectCard key={project.id} project={project} />
+          ))}
+        </div>
+      </main>
 
       {/* Project Setup Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
@@ -259,13 +232,10 @@ export default function ProjectGallery() {
                 onChange={(e) => setProjectName(e.target.value)}
               />
             </div>
-
             <div className="space-y-2">
               <Label>Persona</Label>
               <Select value={persona} onValueChange={(v) => setPersona(v as Persona)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="TPM">Technical PM</SelectItem>
                   <SelectItem value="Analyst">Analyst</SelectItem>
@@ -273,51 +243,28 @@ export default function ProjectGallery() {
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Deadline</Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !deadline && "text-muted-foreground"
-                    )}
-                  >
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !deadline && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {deadline ? format(deadline, "PPP") : "Pick a date"}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={deadline}
-                    onSelect={setDeadline}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <Calendar mode="single" selected={deadline} onSelect={setDeadline} initialFocus className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="project-desc">Description</Label>
-              <Textarea
-                id="project-desc"
-                placeholder="Describe your project in detail..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-              />
+              <Textarea id="project-desc" placeholder="Describe your project in detail..." value={description} onChange={(e) => setDescription(e.target.value)} rows={4} />
             </div>
-
-            <Button className="w-full" size="lg" onClick={handleCreate}>
-              Create Project
-            </Button>
+            <Button className="w-full" size="lg" onClick={handleCreate}>Create Project</Button>
           </div>
         </DialogContent>
       </Dialog>
-    </main>
+    </div>
   );
 }

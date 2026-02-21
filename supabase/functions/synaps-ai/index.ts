@@ -105,7 +105,7 @@ async function callLLM(systemPrompt: string, userMessage: string, apiKey: string
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "gpt-4o-mini",
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },

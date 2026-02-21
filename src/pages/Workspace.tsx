@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import synapsWordmark from "@/assets/synaps-wordmark.png";
+import synapsWordmarkDark from "@/assets/synaps-wordmark-dark.png";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Settings,
@@ -705,7 +706,7 @@ export default function Workspace() {
           <button onClick={() => navigate("/")} className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Back to gallery">
             <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <img src={synapsWordmark} alt="SYNAPS" className="h-16 object-contain" />
+          <img src={darkMode ? synapsWordmarkDark : synapsWordmark} alt="SYNAPS" className="h-16 object-contain" />
           <span className="text-muted-foreground">|</span>
           {isEditingName ? (
             <div className="relative grid items-center max-w-md">

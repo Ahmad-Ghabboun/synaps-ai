@@ -788,7 +788,9 @@ export default function Workspace() {
           <button className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Help">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
           </button>
-          <div className="w-10 h-10 bg-muted rounded-full ml-2" aria-label="User avatar" />
+          <div className="w-10 h-10 rounded-full ml-2 overflow-hidden bg-muted flex items-center justify-center" aria-label="User avatar">
+            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=synaps" alt="User avatar" className="w-full h-full object-cover" />
+          </div>
         </div>
       </nav>
 

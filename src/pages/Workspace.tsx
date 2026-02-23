@@ -19,8 +19,8 @@ import {
   AlertTriangle,
   AlertCircle,
   GripVertical,
-  Github,
-} from "lucide-react";
+  Github } from
+"lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
 import { toast } from "sonner";
@@ -28,8 +28,8 @@ import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  AccordionTrigger } from
+"@/components/ui/accordion";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,10 +40,10 @@ import AuditDashboard from "@/components/AuditDashboard";
 import { supabase } from "@/integrations/supabase/client";
 
 // Parse SQAP markdown into sections
-function parseSqapSections(sqap: string): { title: string; content: string }[] {
+function parseSqapSections(sqap: string): {title: string;content: string;}[] {
   if (!sqap) return [];
   const lines = sqap.split("\n");
-  const sections: { title: string; content: string }[] = [];
+  const sections: {title: string;content: string;}[] = [];
   let currentTitle = "";
   let currentContent: string[] = [];
 
@@ -65,7 +65,7 @@ function parseSqapSections(sqap: string): { title: string; content: string }[] {
 }
 
 // Simple markdown renderer
-function RenderMarkdown({ text }: { text: string }) {
+function RenderMarkdown({ text }: {text: string;}) {
   const lines = text.split("\n");
   return (
     <div className="space-y-2">
@@ -81,7 +81,7 @@ function RenderMarkdown({ text }: { text: string }) {
         if (line.trim().match(/^[-*•]/)) {
           const textOnly = cleanLine.replace(/^[-*•]\s*/, "");
           const colonIndex = textOnly.indexOf(':');
-          
+
           if (colonIndex !== -1) {
             const label = textOnly.substring(0, colonIndex);
             const description = textOnly.substring(colonIndex + 1);
@@ -94,8 +94,8 @@ function RenderMarkdown({ text }: { text: string }) {
                   <strong className="font-bold text-foreground">{label}:</strong>
                   <span className="text-foreground/90 ml-1 font-normal">{description}</span>
                 </span>
-              </p>
-            );
+              </p>);
+
           }
         }
 
@@ -108,31 +108,31 @@ function RenderMarkdown({ text }: { text: string }) {
         if (line.trim() === "") return <div key={i} className="h-2" />;
         return <p key={i} className="text-base text-foreground/90 mb-3 leading-relaxed">{cleanLine}</p>;
       })}
-    </div>
-  );
+    </div>);
+
 }
 
 
 
 
 // Risk card
-function RiskCard({ risk, onFix, onDismiss }: { risk: Risk; onFix: (risk: Risk) => void; onDismiss: (risk: Risk) => void }) {
+function RiskCard({ risk, onFix, onDismiss }: {risk: Risk;onFix: (risk: Risk) => void;onDismiss: (risk: Risk) => void;}) {
   const isCritical = risk.severity === "critical";
   const [isExpanded, setIsExpanded] = useState(false);
-  
-  const containerClasses = isCritical
-    ? "bg-red-50 border-red-200 shadow-red-100/50 dark:bg-red-950/40 dark:border-red-900/50"
-    : "bg-orange-50 border-orange-200 shadow-orange-100/50 dark:bg-orange-950/40 dark:border-orange-900/50";
 
-  const iconColor = isCritical
-    ? "text-red-500 dark:text-red-400"
-    : "text-orange-500 dark:text-orange-400";
+  const containerClasses = isCritical ?
+  "bg-red-50 border-red-200 shadow-red-100/50 dark:bg-red-950/40 dark:border-red-900/50" :
+  "bg-orange-50 border-orange-200 shadow-orange-100/50 dark:bg-orange-950/40 dark:border-orange-900/50";
+
+  const iconColor = isCritical ?
+  "text-red-500 dark:text-red-400" :
+  "text-orange-500 dark:text-orange-400";
 
   return (
     <div
       className={`flex flex-wrap items-center justify-between p-4 rounded-2xl border-2 mb-3 cursor-pointer transition-all shadow-sm hover:shadow-md dark:shadow-none ${containerClasses}`}
-      onClick={() => setIsExpanded(!isExpanded)}
-    >
+      onClick={() => setIsExpanded(!isExpanded)}>
+
       <AlertCircle className={`h-6 w-6 mr-4 shrink-0 ${iconColor}`} />
 
       <div className="flex-1">
@@ -148,8 +148,8 @@ function RiskCard({ risk, onFix, onDismiss }: { risk: Risk; onFix: (risk: Risk) 
         {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
       </div>
       
-      {isExpanded && (
-        <div className="w-full mt-4 pl-10">
+      {isExpanded &&
+      <div className="w-full mt-4 pl-10">
           <p className={`text-sm mb-2 ${isCritical ? "text-red-800 dark:text-red-200" : "text-orange-800 dark:text-orange-200"}`}>
             {risk.description}
           </p>
@@ -158,48 +158,48 @@ function RiskCard({ risk, onFix, onDismiss }: { risk: Risk; onFix: (risk: Risk) 
           </p>
           <div className="flex items-center justify-between">
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onFix(risk);
-              }}
-              disabled={risk.isFixing}
-              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors"
-            >
-              {risk.isFixing ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4" />
-              )}
+            onClick={(e) => {
+              e.stopPropagation();
+              onFix(risk);
+            }}
+            disabled={risk.isFixing}
+            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors">
+
+              {risk.isFixing ?
+            <Loader2 className="h-4 w-4 animate-spin" /> :
+
+            <Sparkles className="h-4 w-4" />
+            }
               {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
             </button>
             <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDismiss(risk);
-              }}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-            >
+            onClick={(e) => {
+              e.stopPropagation();
+              onDismiss(risk);
+            }}
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+
               Dismiss
             </button>
           </div>
         </div>
-      )}
-    </div>
-  );
+      }
+    </div>);
+
 }
 
 // Generate CSV from audit result
 function generateMetricsCsv(auditResult: any, projectName: string): string {
   const rows = [
-    ["Metric", "Value"],
-    ["Project", projectName],
-    ["Quality Score", String(auditResult.qualityScore)],
-    ["Grade", auditResult.grade],
-    ["Critical Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "critical").length)],
-    ["Moderate Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "moderate").length)],
-    ["Total Risks", String(auditResult.risks.length)],
-    ...auditResult.risks.map((r: Risk, i: number) => [`Risk ${i + 1}: ${r.title}`, `${r.severity} — ${r.section}`]),
-  ];
+  ["Metric", "Value"],
+  ["Project", projectName],
+  ["Quality Score", String(auditResult.qualityScore)],
+  ["Grade", auditResult.grade],
+  ["Critical Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "critical").length)],
+  ["Moderate Risks", String(auditResult.risks.filter((r: Risk) => r.severity === "moderate").length)],
+  ["Total Risks", String(auditResult.risks.length)],
+  ...auditResult.risks.map((r: Risk, i: number) => [`Risk ${i + 1}: ${r.title}`, `${r.severity} — ${r.section}`])];
+
   return rows.map((r) => r.join(",")).join("\n");
 }
 
@@ -222,8 +222,8 @@ export default function Workspace() {
   const [isCopiedWhole, setIsCopiedWhole] = useState(false);
   const uploadRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
-  
-  
+
+
   // GitHub Integration State
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
   const [isSyncOn, setIsSyncOn] = useState(false);
@@ -262,15 +262,15 @@ export default function Workspace() {
           sha = data.sha;
         }
       } catch (e) {
+
         // File likely doesn't exist
       }
-
       // 2. Create or Update
       const res = await fetch(`https://api.github.com/repos/${OWNER}/${REPO}/contents/${PATH}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${PAT}`,
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
         body: JSON.stringify({
           message: "Update Artifact via Synaps AI",
@@ -294,8 +294,8 @@ export default function Workspace() {
   // Theme & Design State
   const [darkMode, setDarkMode] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("theme") === "dark" || 
-             (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      return localStorage.getItem("theme") === "dark" ||
+      !("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
     return false;
   });
@@ -335,11 +335,11 @@ export default function Workspace() {
   }, [location.state]);
 
   // Determine pipeline step
-  const activeStep = currentProject?.auditResult
-    ? 2
-    : currentProject?.sqap
-    ? 1
-    : 0;
+  const activeStep = currentProject?.auditResult ?
+  2 :
+  currentProject?.sqap ?
+  1 :
+  0;
 
   useEffect(() => {
     if (!currentProject) {
@@ -368,7 +368,7 @@ export default function Workspace() {
     (e: MouseEvent) => {
       if (isDragging && containerRef.current) {
         const containerRect = containerRef.current.getBoundingClientRect();
-        const newRightWidth = ((containerRect.right - e.clientX) / containerRect.width) * 100;
+        const newRightWidth = (containerRect.right - e.clientX) / containerRect.width * 100;
         if (newRightWidth >= 30 && newRightWidth <= 50) {
           setRightPanelWidth(newRightWidth);
         }
@@ -428,7 +428,7 @@ export default function Workspace() {
 
   async function callSkill(skill: string, payload: Record<string, string>) {
     const { data, error } = await supabase.functions.invoke("synaps-ai", {
-      body: { skill, ...payload },
+      body: { skill, ...payload }
     });
     if (error) {
       console.error("Skill error:", error);
@@ -481,7 +481,7 @@ export default function Workspace() {
         auditResult: DEMO_PROJECT.auditResult,
         score: DEMO_PROJECT.score,
         grade: DEMO_PROJECT.grade,
-        files,
+        files
       });
       toast.success("Demo data loaded!");
       setInputText("");
@@ -510,7 +510,7 @@ export default function Workspace() {
           auditResult,
           score: auditResult.qualityScore,
           grade: auditResult.grade,
-          files: allFiles,
+          files: allFiles
         });
         setActiveTab("audit");
         toast.success("Dual audit complete!");
@@ -540,7 +540,7 @@ export default function Workspace() {
         auditResult: DEMO_PROJECT.auditResult,
         score: DEMO_PROJECT.score,
         grade: DEMO_PROJECT.grade,
-        files,
+        files
       });
       toast.success("Demo audit loaded!");
       return;
@@ -557,7 +557,7 @@ export default function Workspace() {
         auditResult,
         score: auditResult.qualityScore,
         grade: auditResult.grade,
-        files: allFiles,
+        files: allFiles
       });
       toast.success("Audit complete!");
     } catch (err: any) {
@@ -582,7 +582,7 @@ export default function Workspace() {
         auditResult: newAudit,
         score: newScore,
         grade: newGrade,
-        files,
+        files
       });
       toast.success(`Fixed: ${risk.title}`);
       return;
@@ -590,7 +590,7 @@ export default function Workspace() {
 
     // Mark risk as fixing
     const risks = activeAudit?.risks.map((r: Risk) =>
-      r.id === risk.id ? { ...r, isFixing: true } : r
+    r.id === risk.id ? { ...r, isFixing: true } : r
     ) || [];
     updateCurrentProject({ auditResult: { ...activeAudit, risks } });
 
@@ -600,7 +600,7 @@ export default function Workspace() {
         sqap: currentProject.sqap,
         section: risk.section,
         title: risk.title,
-        description: risk.description,
+        description: risk.description
       });
       // Optimizer now returns the ENTIRE merged SQAP document
       const mergedSqap = fixData.result;
@@ -621,7 +621,7 @@ export default function Workspace() {
         auditResult,
         score: auditResult.qualityScore,
         grade: auditResult.grade,
-        files: allFiles,
+        files: allFiles
       });
       toast.success("Score updated!");
     } catch (err: any) {
@@ -637,7 +637,7 @@ export default function Workspace() {
     const updatedRisks = activeAudit.risks.filter((r: Risk) => r.id !== risk.id);
     const newAudit = { ...activeAudit, risks: updatedRisks };
     updateCurrentProject({
-      auditResult: newAudit,
+      auditResult: newAudit
     });
     toast.success("Risk dismissed");
   }
@@ -694,7 +694,7 @@ export default function Workspace() {
       const newFile: FileObject = { name: file.name, type: fileType as "md" | "json" | "csv" | "pdf", content };
       updateCurrentProject({
         sqap: content,
-        files: [newFile, ...(currentProject.files?.filter(f => f.name !== file.name) || [])],
+        files: [newFile, ...(currentProject.files?.filter((f) => f.name !== file.name) || [])]
       });
       toast.success(`Uploaded ${file.name} — ready to audit!`);
     };
@@ -716,34 +716,34 @@ export default function Workspace() {
           </button>
           <img src={synapsWordmark} alt="SYNAPS" className="h-12 object-contain" />
           <span className="text-muted-foreground">|</span>
-          {isEditingName ? (
-            <div className="relative grid items-center max-w-md">
+          {isEditingName ?
+          <div className="relative grid items-center max-w-md">
               <span className="col-start-1 row-start-1 opacity-0 whitespace-pre text-lg font-semibold pointer-events-none">
                 {tempName || "Untitled"}
               </span>
               <input
-                ref={nameInputRef}
-                value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                onBlur={handleNameSave}
-                onKeyDown={handleNameKeyDown}
-                className="col-start-1 row-start-1 text-lg font-semibold text-foreground bg-transparent outline-none border-none p-0 w-full"
-              />
-            </div>
-          ) : (
-            <span
-              onClick={handleNameClick}
-              className="text-lg font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors truncate max-w-md"
-              title={currentProject.name || "Untitled"}
-            >
-              {(currentProject.name || "Untitled").length > 20
-                ? `${(currentProject.name || "Untitled").slice(0, 20)}...`
-                : (currentProject.name || "Untitled")}
+              ref={nameInputRef}
+              value={tempName}
+              onChange={(e) => setTempName(e.target.value)}
+              onBlur={handleNameSave}
+              onKeyDown={handleNameKeyDown}
+              className="col-start-1 row-start-1 text-lg font-semibold text-foreground bg-transparent outline-none border-none p-0 w-full" />
+
+            </div> :
+
+          <span
+            onClick={handleNameClick}
+            className="text-lg font-semibold text-muted-foreground hover:text-foreground cursor-pointer transition-colors truncate max-w-md"
+            title={currentProject.name || "Untitled"}>
+
+              {(currentProject.name || "Untitled").length > 20 ?
+            `${(currentProject.name || "Untitled").slice(0, 20)}...` :
+            currentProject.name || "Untitled"}
             </span>
-          )}
-          {currentProject.persona && (
-            <Badge variant="outline" className="ml-2 text-xs">{currentProject.persona}</Badge>
-          )}
+          }
+          {currentProject.persona &&
+          <Badge variant="outline" className="ml-2 text-xs">{currentProject.persona}</Badge>
+          }
         </div>
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <SkillsStatus activeStep={activeStep} />
@@ -752,24 +752,24 @@ export default function Workspace() {
           <button
             onClick={toggleSync}
             className={`rounded-lg p-2 transition-all duration-300 ${
-              isSyncOn
-                ? "text-[#6e5494]"
-                : "text-muted-foreground hover:bg-muted"
-            }`}
-            aria-label="Toggle GitHub Sync"
-          >
+            isSyncOn ?
+            "text-[#6e5494]" :
+            "text-muted-foreground hover:bg-muted"}`
+            }
+            aria-label="Toggle GitHub Sync">
+
             <Github className={`h-5 w-5 ${isSyncOn ? "drop-shadow-[0_0_10px_rgba(110,84,148,0.8)] animate-pulse" : ""}`} />
           </button>
-          <button 
-            onClick={() => setSettingsDropdownOpen(!settingsDropdownOpen)} 
-            className={`hover:bg-muted rounded-lg p-2 transition-colors ${settingsDropdownOpen ? "bg-muted" : ""}`} 
-            aria-label="Settings"
-          >
+          <button
+            onClick={() => setSettingsDropdownOpen(!settingsDropdownOpen)}
+            className={`hover:bg-muted rounded-lg p-2 transition-colors ${settingsDropdownOpen ? "bg-muted" : ""}`}
+            aria-label="Settings">
+
             <Settings className="h-5 w-5 text-muted-foreground" />
           </button>
           
-          {settingsDropdownOpen && (
-            <div className="absolute top-full right-0 mt-2 w-64 bg-popover border border-border rounded-xl shadow-xl p-4 z-50 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
+          {settingsDropdownOpen &&
+          <div className="absolute top-full right-0 mt-2 w-64 bg-popover border border-border rounded-xl shadow-xl p-4 z-50 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Dark Mode</span>
                 <Switch checked={darkMode} onCheckedChange={setDarkMode} />
@@ -783,13 +783,13 @@ export default function Workspace() {
                 <Switch checked={state.showRawJson} onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })} />
               </div>
             </div>
-          )}
+          }
           
           <button className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Help">
             <HelpCircle className="h-5 w-5 text-muted-foreground" />
           </button>
           <div className="w-10 h-10 rounded-full ml-2 overflow-hidden bg-muted flex items-center justify-center" aria-label="User avatar">
-            <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=synaps" alt="User avatar" className="w-full h-full object-cover" />
+            <img alt="User avatar" className="w-full h-full object-cover" src="/lovable-uploads/7e01bcf8-efa4-4e54-8767-386c6ea1fae1.jpg" />
           </div>
         </div>
       </nav>
@@ -808,7 +808,7 @@ export default function Workspace() {
                   <Paperclip className="h-4 w-4 mr-1" /> Upload My Own
                 </Button>
                 <Button variant="outline" size="sm" disabled={!sqapContent} onClick={() => {
-                  const sqapFileObj = projectFiles.find(f => f.name === "SQAP.md");
+                  const sqapFileObj = projectFiles.find((f) => f.name === "SQAP.md");
                   if (sqapFileObj) handleDownloadFile(sqapFileObj);
                 }}>
                   <Download className="h-4 w-4 mr-1" /> Download
@@ -819,36 +819,36 @@ export default function Workspace() {
                   disabled={!sqapContent}
                   onClick={handleCopyWhole}
                   className="w-9 px-0"
-                  title="Copy entire artifact"
-                >
+                  title="Copy entire artifact">
+
                   {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
 
             <div className="flex-1 bg-muted/50 rounded-lg p-4 overflow-y-auto scrollbar-hide min-h-[300px]">
-              {state.isLoading.architect ? (
-                <div className="flex flex-col items-center justify-center h-full gap-3">
+              {state.isLoading.architect ?
+              <div className="flex flex-col items-center justify-center h-full gap-3">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   <p className="text-muted-foreground">Generating SQAP...</p>
-                </div>
-              ) : sections.length > 0 ? (
-                <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
-                  {sections.map((section, i) => (
-                    <AccordionItem key={i} value={`section-${i}`}>
+                </div> :
+              sections.length > 0 ?
+              <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
+                  {sections.map((section, i) =>
+                <AccordionItem key={i} value={`section-${i}`}>
                       <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center gap-2">
                           <span className="text-base font-bold">{section.title}</span>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleCopySection(section.content, i); }}
-                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
-                            aria-label={`Copy ${section.title}`}
-                          >
-                            {copiedSectionIndex === i ? (
-                              <Check className="h-3.5 w-3.5 text-green-500" />
-                            ) : (
-                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                            )}
+                        onClick={(e) => {e.stopPropagation();handleCopySection(section.content, i);}}
+                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                        aria-label={`Copy ${section.title}`}>
+
+                            {copiedSectionIndex === i ?
+                        <Check className="h-3.5 w-3.5 text-green-500" /> :
+
+                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                        }
                           </button>
                         </div>
                       </AccordionTrigger>
@@ -856,15 +856,15 @@ export default function Workspace() {
                         <RenderMarkdown text={section.content} />
                       </AccordionContent>
                     </AccordionItem>
-                  ))}
-                </Accordion>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+                )}
+                </Accordion> :
+
+              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <FileText className="h-12 w-12 mb-3 opacity-30" />
                   <p>Generated SQAP document will appear here...</p>
                   <p className="text-xs mt-1">Use the input below to describe your project</p>
                 </div>
-              )}
+              }
             </div>
           </section>
 
@@ -875,8 +875,8 @@ export default function Workspace() {
                 <button
                   className="shrink-0 p-3 hover:bg-muted rounded-lg transition-colors mb-1"
                   aria-label="Attach file"
-                  onClick={() => uploadRef.current?.click()}
-                >
+                  onClick={() => uploadRef.current?.click()}>
+
                   <Paperclip className="h-4 w-4 text-muted-foreground" />
                 </button>
                 <textarea
@@ -891,18 +891,18 @@ export default function Workspace() {
                   }}
                   placeholder="Describe your project in detail..."
                   className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[300px] overflow-hidden py-1"
-                  rows={1}
-                />
+                  rows={1} />
+
                 <button
                   onClick={launchEngine}
                   disabled={isAnyLoading}
-                  className="shrink-0 mb-1 p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors"
-                >
-                  {isAnyLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Send className="h-4 w-4" />
-                  )}
+                  className="shrink-0 mb-1 p-3 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 disabled:opacity-50 transition-colors">
+
+                  {isAnyLoading ?
+                  <Loader2 className="h-4 w-4 animate-spin" /> :
+
+                  <Send className="h-4 w-4" />
+                  }
                 </button>
               </div>
               <p className="text-xs text-muted-foreground mt-1 text-right">⌘/Ctrl + Enter to launch</p>
@@ -913,16 +913,16 @@ export default function Workspace() {
         {/* Drag Handle */}
         <div
           className="hidden lg:flex w-6 cursor-col-resize items-center justify-center shrink-0 hover:bg-primary/5 transition-colors group"
-          onMouseDown={startResizing}
-        >
+          onMouseDown={startResizing}>
+
           <div className={`w-1 h-12 rounded-full transition-colors ${isDragging ? "bg-primary" : "bg-border group-hover:bg-primary/50"}`} />
         </div>
 
         {/* Right Panel - Mission Control (Tabbed) */}
-        <section 
+        <section
           className="bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0 h-full"
-          style={{ width: window.innerWidth >= 1024 ? `${rightPanelWidth}%` : '100%' }}
-        >
+          style={{ width: window.innerWidth >= 1024 ? `${rightPanelWidth}%` : '100%' }}>
+
           <h2 className="text-2xl font-bold text-foreground mb-4">Mission Control</h2>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
@@ -941,39 +941,39 @@ export default function Workspace() {
                   className="w-full py-4 text-lg font-bold"
                   size="lg"
                   onClick={runDualAudit}
-                  disabled={!sqapContent || isAnyLoading}
-                >
-                  {state.isLoading.auditor ? (
-                    <>
+                  disabled={!sqapContent || isAnyLoading}>
+
+                  {state.isLoading.auditor ?
+                  <>
                       <Loader2 className="h-5 w-5 animate-spin mr-2" />
                       Analyzing Document...
-                    </>
-                  ) : (
-                    "RUN DUAL AUDIT"
-                  )}
+                    </> :
+
+                  "RUN DUAL AUDIT"
+                  }
                 </Button>
 
-                {state.showRawJson && activeAudit?.rawJson && (
-                  <pre className="bg-muted/50 border border-border rounded-lg p-4 text-xs overflow-x-auto text-muted-foreground max-h-48">
+                {state.showRawJson && activeAudit?.rawJson &&
+                <pre className="bg-muted/50 border border-border rounded-lg p-4 text-xs overflow-x-auto text-muted-foreground max-h-48">
                     {JSON.stringify(JSON.parse(activeAudit.rawJson), null, 2)}
                   </pre>
-                )}
+                }
               </TabsContent>
 
               {/* Gap Feed Tab */}
               <TabsContent value="gaps" className="mt-0">
                 <div className="space-y-3">
-                  {activeAudit?.risks && activeAudit.risks.length > 0 ? (
-                    activeAudit.risks.map((risk: Risk) => (
-                      <RiskCard key={risk.id} risk={risk} onFix={handleFix} onDismiss={handleDismiss} />
-                    ))
-                  ) : (
-                    <div className="text-center py-8 text-muted-foreground">
+                  {activeAudit?.risks && activeAudit.risks.length > 0 ?
+                  activeAudit.risks.map((risk: Risk) =>
+                  <RiskCard key={risk.id} risk={risk} onFix={handleFix} onDismiss={handleDismiss} />
+                  ) :
+
+                  <div className="text-center py-8 text-muted-foreground">
                       <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-30" />
                       <p className="text-sm">No audit results yet.</p>
                       <p className="text-xs">Run the Dual Audit to analyze your project.</p>
                     </div>
-                  )}
+                  }
                 </div>
               </TabsContent>
 
@@ -989,22 +989,22 @@ export default function Workspace() {
                         onClick={() => file && handleDownloadFile(file)}
                         disabled={!exists}
                         className={`aspect-square border border-border rounded-lg flex flex-col items-center justify-center p-4 transition-colors ${
-                          exists ? "bg-muted/50 hover:bg-muted cursor-pointer" : "bg-muted/20 opacity-50 cursor-not-allowed"
-                        }`}
-                      >
+                        exists ? "bg-muted/50 hover:bg-muted cursor-pointer" : "bg-muted/20 opacity-50 cursor-not-allowed"}`
+                        }>
+
                         <FileText className={`h-8 w-8 mb-2 ${exists ? "text-primary" : "text-muted-foreground"}`} />
                         <span className="text-sm text-muted-foreground text-center">{fileName}</span>
                         {exists && <span className="text-xs text-success mt-1">Ready</span>}
-                      </button>
-                    );
+                      </button>);
+
                   })}
                 </div>
                 <Button
                   variant="outline"
                   className="w-full"
                   onClick={handleDownloadAll}
-                  disabled={projectFiles.length === 0}
-                >
+                  disabled={projectFiles.length === 0}>
+
                   <Download className="h-4 w-4 mr-2" /> Download All Assets
                 </Button>
               </TabsContent>
@@ -1014,6 +1014,6 @@ export default function Workspace() {
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
-    </div>
-  );
+    </div>);
+
 }

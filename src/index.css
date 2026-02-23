@@ -214,6 +214,38 @@
   background: hsl(var(--muted) / 0.4);
 }
 
-.audit-counter-breathe {
-  animation: breathe-glow 2s ease-in-out infinite;
+/* Pill counter colors */
+.audit-pill-red {
+  border-color: hsl(0 84% 60% / 0.4);
+  background: hsl(0 84% 95% / 0.5);
+}
+.dark .audit-pill-red {
+  border-color: hsl(0 84% 60% / 0.5);
+  background: hsl(0 50% 12% / 0.5);
+}
+
+.audit-pill-yellow {
+  border-color: hsl(38 92% 50% / 0.4);
+  background: hsl(38 92% 95% / 0.5);
+}
+.dark .audit-pill-yellow {
+  border-color: hsl(38 92% 50% / 0.5);
+  background: hsl(38 50% 12% / 0.5);
+}
+
+.audit-pill-neutral {
+  border-color: hsl(var(--border));
+  background: hsl(var(--muted));
+}
+
+/* Loading ring animation */
+.audit-ring-loading {
+  animation: rotate-glow 1s linear infinite !important;
+}
+.audit-ring-loading circle {
+  animation: pulse-opacity 1s ease-in-out infinite;
+}
+@keyframes pulse-opacity {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
 }

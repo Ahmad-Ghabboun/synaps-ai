@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function SkillsStatus({ activeStep }: { activeStep: number }) {
   const steps = [
-    { label: "Extraction", desc: "Architect: Gemini" },
+    { label: "Extraction", desc: "Gemini" },
     { label: "Cross-Validation", desc: "Claude & Gemini" },
     { label: "Adjudication", desc: "Synaps" },
   ];

@@ -26,7 +26,7 @@ export default function DashboardSidebar() {
       <aside className="w-16 h-screen sticky top-0 flex flex-col items-center py-4 gap-2 bg-card border-r border-border shrink-0">
         {/* Logo */}
         <div className="w-10 h-10 flex items-center justify-center rounded-xl mb-4 overflow-hidden">
-          <img alt="Logo" className="h-14 w-14 object-cover" src={isDark ? logoDark : "/lovable-uploads/e531f254-382c-4aa5-b31d-66c255695f89.png"} />
+          <img alt="Logo" className="h-14 w-14 object-fill" src={isDark ? logoDark : "/lovable-uploads/e531f254-382c-4aa5-b31d-66c255695f89.png"} />
         </div>
 
         {/* Nav Items */}

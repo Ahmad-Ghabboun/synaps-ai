@@ -7,12 +7,12 @@ interface AuditDashboardProps {
   grade: string;
   auditResult: AuditResult | null;
   sectionsCount: number;
+  isLoading?: boolean;
 }
 
-export default function AuditDashboard({ score, grade, auditResult, sectionsCount }: AuditDashboardProps) {
+export default function AuditDashboard({ score, grade, auditResult, sectionsCount, isLoading }: AuditDashboardProps) {
   const [animatedScore, setAnimatedScore] = useState(0);
   const [barsVisible, setBarsVisible] = useState(false);
-  const [countersReady, setCountersReady] = useState(false);
 
   const risks = auditResult?.risks || [];
   const criticalCount = risks.filter((r: Risk) => r.severity === "critical").length;
@@ -41,10 +41,8 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    const t = setTimeout(() => setCountersReady(true), 1200);
-    return () => clearTimeout(t);
-  }, []);
+
+
 
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
@@ -95,13 +93,20 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Pill Counters */}
+      <div className="flex items-center justify-center gap-2">
+        <PillCounter label="Critical" value={criticalCount} colorClass="audit-pill-red" />
+        <PillCounter label="Moderate" value={moderateCount} colorClass="audit-pill-yellow" />
+        <PillCounter label="Sections" value={sectionsCount} colorClass="audit-pill-neutral" />
+      </div>
+
       {/* Section A: Glowing Circular Ring */}
       <div className="flex flex-col items-center">
         <div className="relative w-[220px] h-[220px]">
           <svg
             width="220" height="220" viewBox="0 0 220 220"
-            className="absolute inset-0 audit-ring-glow-rotate"
+            className={`absolute inset-0 audit-ring-glow-rotate ${isLoading ? "audit-ring-loading" : ""}`}
           >
             <defs>
               <linearGradient id="glow-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -203,46 +208,15 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
         ))}
       </div>
 
-      {/* Section C: Three Flip Counter Cards */}
-      <div className="grid grid-cols-3 gap-3">
-        <FlipCard label="Critical" value={criticalCount} ready={countersReady} colorClass="audit-counter-red" />
-        <FlipCard label="Moderate" value={moderateCount} ready={countersReady} colorClass="audit-counter-yellow" />
-        <FlipCard label="Sections" value={sectionsCount} ready={countersReady} colorClass="audit-counter-neutral" />
-      </div>
     </div>
   );
 }
 
-function FlipCard({ label, value, ready, colorClass }: { label: string; value: number; ready: boolean; colorClass: string }) {
-  const [displayValue, setDisplayValue] = useState(0);
-
-  useEffect(() => {
-    if (!ready) return;
-    let current = 0;
-    const target = value;
-    if (target === 0) { setDisplayValue(0); return; }
-    const step = Math.max(1, Math.floor(target / 10));
-    const interval = setInterval(() => {
-      current += step;
-      if (current >= target) { current = target; clearInterval(interval); }
-      setDisplayValue(current);
-    }, 60);
-    return () => clearInterval(interval);
-  }, [ready, value]);
-
+function PillCounter({ label, value, colorClass }: { label: string; value: number; colorClass: string }) {
   return (
-    <div className={`rounded-xl border p-6 flex flex-col items-center gap-2 shadow-sm ${colorClass} ${ready ? "audit-counter-breathe" : ""}`}>
-      <span
-        className="text-4xl font-bold tabular-nums text-foreground"
-        style={{
-          transform: ready ? "rotateX(0deg)" : "rotateX(90deg)",
-          transition: "transform 0.6s ease-out",
-          display: "inline-block",
-        }}
-      >
-        {displayValue}
-      </span>
-      <span className="text-xs text-muted-foreground font-medium">{label}</span>
+    <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${colorClass}`}>
+      <span className="tabular-nums font-bold text-foreground">{value}</span>
+      <span className="text-muted-foreground">{label}</span>
     </div>
   );
 }

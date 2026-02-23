@@ -933,7 +933,7 @@ export default function Workspace() {
             <div className="flex-1 overflow-y-auto scrollbar-hide mt-4">
               {/* Audit Tab */}
               <TabsContent value="audit" className="mt-0 space-y-6">
-                <AuditDashboard score={currentProject.score} grade={currentProject.grade} auditResult={activeAudit} sectionsCount={sections.length} />
+                <AuditDashboard score={currentProject.score} grade={currentProject.grade} auditResult={activeAudit} sectionsCount={sections.length} isLoading={state.isLoading.auditor} />
 
                 <Button
                   className="w-full py-4 text-lg font-bold"

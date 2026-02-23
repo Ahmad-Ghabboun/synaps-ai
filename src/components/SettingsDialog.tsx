@@ -75,6 +75,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Switch
               checked={state.demoMode}
               onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })}
+              disabled
             />
           </div>
 

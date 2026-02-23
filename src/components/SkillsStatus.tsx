@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 export function SkillsStatus({ activeStep }: { activeStep: number }) {
   const steps = [
-    { label: "Extraction", desc: "Architect" },
+    { label: "Extraction", desc: "Architect: Gemini" },
     { label: "Cross-Validation", desc: "Claude & Gemini" },
     { label: "Adjudication", desc: "Synaps" },
   ];
@@ -44,11 +44,9 @@ export function SkillsStatus({ activeStep }: { activeStep: number }) {
               >
                 {step.label}
               </span>
-              {isActive && (
-                <span className="text-[10px] text-muted-foreground leading-none mt-0.5">
-                  {step.desc}
-                </span>
-              )}
+              <span className="text-[10px] text-muted-foreground leading-none mt-0.5">
+                {step.desc}
+              </span>
             </div>
             {i < steps.length - 1 && (
               <div className="h-px w-8 bg-border" />

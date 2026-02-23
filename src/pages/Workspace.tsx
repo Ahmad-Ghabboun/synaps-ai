@@ -768,7 +768,7 @@ export default function Workspace() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Demo Mode</span>
-                <Switch checked={true} disabled={true} />
+                <Switch checked={state.demoMode} onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })} />
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Technical View</span>

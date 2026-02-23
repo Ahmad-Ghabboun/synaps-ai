@@ -69,12 +69,12 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <div>
               <p className="text-sm font-medium text-foreground">Demo Mode</p>
               <p className="text-xs text-muted-foreground">
-                Demo mode is always enabled
+                Use prebuilt demo results instead of live API calls
               </p>
             </div>
             <Switch
-              checked={true}
-              disabled={true}
+              checked={state.demoMode}
+              onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })}
             />
           </div>
 

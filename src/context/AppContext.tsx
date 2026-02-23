@@ -15,7 +15,7 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
-  demoMode: true,
+  demoMode: false,
   showRawJson: false,
 };
 
@@ -51,7 +51,7 @@ function reducer(state: AppState, action: Action): AppState {
     case "SET_LOADING":
       return { ...state, isLoading: { ...state.isLoading, ...action.loading } };
     case "SET_DEMO_MODE":
-      return { ...state, demoMode: true };
+      return { ...state, demoMode: action.enabled };
     case "SET_SHOW_RAW_JSON":
       return { ...state, showRawJson: action.enabled };
     default:

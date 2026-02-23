@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import synapsWordmark from "@/assets/synaps-wordmark.png";
-import synapsWordmarkDark from "@/assets/synaps-wordmark-dark.png";
+
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   Settings,
@@ -310,6 +310,14 @@ export default function Workspace() {
       localStorage.setItem("theme", "light");
     }
   }, [darkMode]);
+
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = textareaRef.current.scrollHeight + "px";
+    }
+  }, [inputText]);
 
   useEffect(() => {
     const handleThemeChange = () => {
@@ -706,7 +714,7 @@ export default function Workspace() {
           <button onClick={() => navigate("/")} className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Back to gallery">
             <ChevronLeft className="h-5 w-5 text-muted-foreground" />
           </button>
-          <img src={darkMode ? synapsWordmarkDark : synapsWordmark} alt="SYNAPS" className="h-12 object-contain" />
+          <img src={synapsWordmark} alt="SYNAPS" className="h-12 object-contain" />
           <span className="text-muted-foreground">|</span>
           {isEditingName ? (
             <div className="relative grid items-center max-w-md">
@@ -880,8 +888,8 @@ export default function Workspace() {
                     }
                   }}
                   placeholder="Describe your project in detail..."
-                  className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[120px] py-1"
-                  rows={2}
+                  className="flex-1 resize-none bg-transparent outline-none border-none text-foreground placeholder:text-muted-foreground text-sm min-h-[40px] max-h-[300px] overflow-hidden py-1"
+                  rows={1}
                 />
                 <button
                   onClick={launchEngine}

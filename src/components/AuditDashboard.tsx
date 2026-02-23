@@ -190,7 +190,7 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
                 <div
                   className={`absolute inset-y-0 left-0 rounded-full ${bar.colorClass} audit-bar-shimmer`}
                   style={{
-                    width: barsVisible ? `${Math.max(bar.value * 100, 2)}%` : "0%",
+                    width: barsVisible ? `${bar.value * 100}%` : "0%",
                     transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
                   }}
                 />

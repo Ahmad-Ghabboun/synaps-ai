@@ -4,10 +4,13 @@ import { cn } from "@/lib/utils";
 
 export function SkillsStatus({ activeStep }: { activeStep: number }) {
   const steps = [
-    { label: "Extraction", desc: "Gemini" },
-    { label: "Cross-Validation", desc: "Claude & Gemini" },
-    { label: "Adjudication", desc: "Synaps" },
-  ];
+  { label: "Extraction", desc: "Gemini 2.5 Flash" },
+  { label: "Cross-Validation", desc: "Gemini 2.5 Flash × Gemini 3 Pro" },
+  // NOTE: Gemini 2.5 Flash × Gemini 3 Pro used for demo and API credit purposes only
+  // Original Architecture and post-demo PRODUCTION (subscription): Cross-Validation will upgrade to Gemini 3 Pro × Claude Sonnet 4.6
+  // for true cross-provider validation (Google vs Anthropic)
+  { label: "Adjudication", desc: "Synaps Judge" },
+];
 
   return (
     <div className="flex items-center gap-4">

@@ -98,7 +98,7 @@ function mergeAuditResults(tech: any, business: any): any {
   };
 }
 
-async function callLLM(systemPrompt: string, userMessage: string, apiKey: string) {
+async function callLLM(systemPrompt: string, userMessage: string, apiKey: string, model: string = "google/gemini-2.5-flash") {
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -106,7 +106,7 @@ async function callLLM(systemPrompt: string, userMessage: string, apiKey: string
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: model,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -161,12 +161,11 @@ Deno.serve(async (req) => {
         break;
       }
       case "auditor": {
-        // Run dual audit: Technical + Business personas
         const userMessage = `SQAP Document:\n${sqap}\n\nReturn ONLY valid JSON.`;
         const [techRaw, bizRaw] = await Promise.all([
-        callLLM(buildTechAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY),
-        callLLM(buildBusinessAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY),
-      ]);
+          callLLM(buildTechAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY, "google/gemini-2.5-flash"),
+          callLLM(buildBusinessAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY, "google/gemini-3-pro"),
+        ]);
         const techResult = parseAuditJson(techRaw);
         const bizResult = parseAuditJson(bizRaw);
         result = mergeAuditResults(techResult, bizResult);

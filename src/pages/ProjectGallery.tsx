@@ -440,16 +440,6 @@ export default function ProjectGallery() {
       <main className="flex-1 px-8 py-8 min-w-0">
         <h1 className="text-3xl font-bold text-foreground mb-8">Dashboard</h1>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <button
-            onClick={() => setModalOpen(true)}
-            className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border p-8 hover:border-primary hover:bg-primary/5 transition-all duration-200 cursor-pointer focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none min-h-[180px]"
-            aria-label="Create new project"
-          >
-            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-              <Plus className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <span className="text-sm font-medium text-muted-foreground">New Project</span>
-          </button>
           {sortedProjects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

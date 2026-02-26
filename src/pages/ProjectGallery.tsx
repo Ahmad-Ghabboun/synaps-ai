@@ -414,29 +414,29 @@ export default function ProjectGallery() {
       <DashboardSidebar />
 
       <main className="flex-1 px-8 py-8 min-w-0">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4">
           <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-          <div className="flex items-center gap-3">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  disabled
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-muted-foreground cursor-not-allowed opacity-50 text-sm font-medium"
-                >
-                  <Plus className="h-4 w-4" /> New Project
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-[260px] text-center">
-                New projects are disabled in the demo version. Contact us for full access.
-              </TooltipContent>
-            </Tooltip>
-            <a
-              href="mailto:ahmadghabboun@outlook.com"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-            >
-              <Send className="h-4 w-4" /> Contact Us
-            </a>
-          </div>
+          <a
+            href="mailto:ahmadghabboun@outlook.com"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <Send className="h-4 w-4" /> Contact Us
+          </a>
+        </div>
+        <div className="mb-6">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                disabled
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-gray-500 dark:text-muted-foreground cursor-not-allowed opacity-60 dark:opacity-50 text-sm font-medium"
+              >
+                <Plus className="h-4 w-4" /> New Project
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom" className="max-w-[260px] text-center">
+              New projects are disabled in the demo version. Contact us for full access.
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedProjects.map((project) => (

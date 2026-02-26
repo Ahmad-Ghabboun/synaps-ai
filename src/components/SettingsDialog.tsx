@@ -65,19 +65,6 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
             <Switch checked={darkMode} onCheckedChange={handleThemeChange} />
           </div>
 
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-foreground">Demo Mode</p>
-              <p className="text-xs text-muted-foreground">
-                Use prebuilt demo results instead of live API calls
-              </p>
-            </div>
-            <Switch
-              checked={state.demoMode}
-              onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })}
-              
-            />
-          </div>
 
           <div className="flex items-center justify-between">
             <div>

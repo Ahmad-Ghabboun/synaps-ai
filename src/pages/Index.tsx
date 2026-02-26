@@ -63,9 +63,6 @@ const { data } = await (supabase as any)
               <h1 className="text-4xl font-bold tracking-tight text-foreground">Dashboard</h1>
               <p className="text-lg text-muted-foreground mt-2">Manage your quality assurance projects</p>
             </div>
-            <Button size="lg" className="gap-2">
-              <Plus className="h-5 w-5" /> New Project
-            </Button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

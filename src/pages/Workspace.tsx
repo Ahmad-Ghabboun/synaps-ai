@@ -775,10 +775,6 @@ export default function Workspace() {
                 <Switch checked={darkMode} onCheckedChange={setDarkMode} />
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Demo Mode</span>
-                <Switch checked={state.demoMode} onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })} />
-              </div>
-              <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Technical View</span>
                 <Switch checked={state.showRawJson} onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })} />
               </div>

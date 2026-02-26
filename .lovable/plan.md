@@ -1,43 +1,37 @@
-# Hardcode Demo Mode & Lock to Demo Project Only
+
+
+# Demo UI Enhancements
 
 ## Changes
 
-### 1. `src/context/AppContext.tsx`
+### 1. `src/components/SettingsDialog.tsx`
+- Add a disabled Demo Mode toggle (always checked, `disabled` prop) between Dark Mode and Technical View sections
 
-- Remove `SET_DEMO_MODE` action type and its reducer case
-- Hardcode `demoMode: true` in initialState (already done)
-- Change project loading logic: always load only `[DEMO_PROJECT]` regardless of localStorage — ignore saved projects
-- Remove localStorage save/load for projects entirely (no user projects persist)
-- Remove `ADD_PROJECT` and `DELETE_PROJECT` reducer cases (prevent project creation/deletion)
+### 2. `src/pages/ProjectGallery.tsx`
+- Add a disabled, grayed-out "New Project" button above the project grid
+- Wrap it in a `Tooltip` that shows "New projects are disabled in the demo version. Contact us for full access." on hover
 
-### 2. `src/components/SettingsDialog.tsx`
+### 3. `src/components/DashboardSidebar.tsx`
+- Add a "Contact Us" button (Mail icon) in the sidebar header area that links to `mailto:ahmadghabboun@outlook.com`
+- OR add it to the top-right header — need to check where the header lives
 
-- Remove the Demo Mode toggle block (lines 68-80)
+### 4. `src/pages/Workspace.tsx` (lines 770-780)
+- Add a disabled Demo Mode toggle in the settings dropdown
 
-### 3. `src/pages/Workspace.tsx`
+### 5. Top-right "Contact Us" button
+- The dashboard page (`ProjectGallery.tsx`) has `DashboardSidebar` on the left and the main content area — there's no top-right header bar in ProjectGallery
+- The Workspace page has a top header bar (lines 770+)
+- Add a "Contact Us" `mailto:` button to the ProjectGallery header area (line 415) and the Workspace header bar
 
-- Remove the Demo Mode toggle from the settings dropdown (lines 777-780)
+### 6. Welcome Modal — new component `src/components/WelcomeModal.tsx`
+- Create a `Dialog` that checks `localStorage` for `"synaps-welcome-dismissed"`
+- Shows the specified welcome message with a close button
+- On close, sets the localStorage flag so it doesn't appear again
+- Render it in `ProjectGallery.tsx` (the main landing page)
 
-### 4. `src/pages/Index.tsx`
+## File Summary
+1. **`src/components/WelcomeModal.tsx`** — New file: dismissable welcome dialog
+2. **`src/components/SettingsDialog.tsx`** — Add disabled Demo Mode toggle
+3. **`src/pages/ProjectGallery.tsx`** — Add disabled New Project button with tooltip, Contact Us button in header, render WelcomeModal
+4. **`src/pages/Workspace.tsx`** — Add disabled Demo Mode toggle in settings dropdown, add Contact Us button in header
 
-- Remove the "New Project" button (lines 66-68)
-- Filter `sortedProjects` to only show the demo project (or rely on context always providing only demo project)
-
-### 5. `src/pages/ProjectGallery.tsx`
-
-- Remove the "New Project" button/card and the create project modal
-- Or simply filter displayed projects to demo only
-
-### 6. `src/types/synaps.ts`
-
-- Remove `demoMode` from `AppState` interface (optional cleanup — can keep as always-true constant)
-
-### 7. Clear existing database data
-
-- Delete all rows from `sync_items` table (the only user-generated data table)
-
-## Summary
-
-Six file changes to remove Demo Mode toggle UI, hardcode demo-only project list, hide project creation, and clear the database.  
-  
-Create a new branch called 'demo-locked', apply all the planned changes to that branch only, and deploy the published site from the demo-locked branch. Keep the main branch completely unchanged.

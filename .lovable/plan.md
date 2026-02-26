@@ -1,37 +1,37 @@
 
 
-# Demo UI Enhancements
+# UI Layout Adjustments in ProjectGallery
 
-## Changes
+## Changes — all in `src/pages/ProjectGallery.tsx`
 
-### 1. `src/components/SettingsDialog.tsx`
-- Add a disabled Demo Mode toggle (always checked, `disabled` prop) between Dark Mode and Technical View sections
+### 1. Restructure the header area (lines 417-440)
+- **Top row**: "Dashboard" heading on left, "Contact Us" button on right (remove from the `gap-3` div with New Project)
+- **Second row**: Disabled "New Project" button below the heading, left-aligned
+- **Third row**: Projects grid below
 
-### 2. `src/pages/ProjectGallery.tsx`
-- Add a disabled, grayed-out "New Project" button above the project grid
-- Wrap it in a `Tooltip` that shows "New projects are disabled in the demo version. Contact us for full access." on hover
+### 2. Light-mode-only darker gray for disabled New Project button (line 424)
+- Change from `bg-muted text-muted-foreground opacity-50` to use a class that's darker in light mode only
+- Use `dark:text-muted-foreground dark:opacity-50 text-gray-500 opacity-70` or similar so light mode gets a more visible gray while dark mode stays unchanged
 
-### 3. `src/components/DashboardSidebar.tsx`
-- Add a "Contact Us" button (Mail icon) in the sidebar header area that links to `mailto:ahmadghabboun@outlook.com`
-- OR add it to the top-right header — need to check where the header lives
+### Layout structure after changes:
+```text
+┌─────────────────────────────────────────────┐
+│  Dashboard                      [Contact Us]│  ← top row
+│  [+ New Project] (disabled, tooltip)        │  ← second row, left-aligned
+│                                             │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐       │  ← grid below
+│  │ Project  │ │ Project  │ │ Project  │       │
+│  └─────────┘ └─────────┘ └─────────┘       │
+└─────────────────────────────────────────────┘
+```
 
-### 4. `src/pages/Workspace.tsx` (lines 770-780)
-- Add a disabled Demo Mode toggle in the settings dropdown
+### Specific edits (lines 417-441):
+Replace the current header + grid layout with:
+1. A flex row: `<h1>Dashboard</h1>` + Contact Us `<a>` button (right-aligned)
+2. A `<div className="mb-6">` containing the disabled New Project button with tooltip
+3. The projects grid unchanged below
 
-### 5. Top-right "Contact Us" button
-- The dashboard page (`ProjectGallery.tsx`) has `DashboardSidebar` on the left and the main content area — there's no top-right header bar in ProjectGallery
-- The Workspace page has a top header bar (lines 770+)
-- Add a "Contact Us" `mailto:` button to the ProjectGallery header area (line 415) and the Workspace header bar
-
-### 6. Welcome Modal — new component `src/components/WelcomeModal.tsx`
-- Create a `Dialog` that checks `localStorage` for `"synaps-welcome-dismissed"`
-- Shows the specified welcome message with a close button
-- On close, sets the localStorage flag so it doesn't appear again
-- Render it in `ProjectGallery.tsx` (the main landing page)
-
-## File Summary
-1. **`src/components/WelcomeModal.tsx`** — New file: dismissable welcome dialog
-2. **`src/components/SettingsDialog.tsx`** — Add disabled Demo Mode toggle
-3. **`src/pages/ProjectGallery.tsx`** — Add disabled New Project button with tooltip, Contact Us button in header, render WelcomeModal
-4. **`src/pages/Workspace.tsx`** — Add disabled Demo Mode toggle in settings dropdown, add Contact Us button in header
+### Light mode color fix:
+- Button classes: `bg-muted text-gray-500 dark:text-muted-foreground cursor-not-allowed opacity-60 dark:opacity-50`
+- This makes the text/icon slightly darker gray in light mode only
 

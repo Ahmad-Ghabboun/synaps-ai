@@ -62,9 +62,18 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 Toggle dark theme
               </p>
             </div>
-            <Switch checked={darkMode} onCheckedChange={handleThemeChange} />
+          <Switch checked={darkMode} onCheckedChange={handleThemeChange} />
           </div>
 
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-foreground">Demo Mode</p>
+              <p className="text-xs text-muted-foreground">
+                Demo mode is active
+              </p>
+            </div>
+            <Switch checked={true} disabled />
+          </div>
 
           <div className="flex items-center justify-between">
             <div>

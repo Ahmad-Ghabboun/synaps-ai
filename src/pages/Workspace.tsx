@@ -775,15 +775,24 @@ export default function Workspace() {
                 <Switch checked={darkMode} onCheckedChange={setDarkMode} />
               </div>
               <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Demo Mode</span>
+                <Switch checked={true} disabled />
+              </div>
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Technical View</span>
                 <Switch checked={state.showRawJson} onCheckedChange={(v) => dispatch({ type: "SET_SHOW_RAW_JSON", enabled: v })} />
               </div>
             </div>
           }
           
-          <button className="hover:bg-muted rounded-lg p-2 transition-colors" aria-label="Help">
-            <HelpCircle className="h-5 w-5 text-muted-foreground" />
-          </button>
+          <a
+            href="mailto:ahmadghabboun@outlook.com"
+            className="hover:bg-muted rounded-lg p-2 transition-colors flex items-center"
+            aria-label="Contact Us"
+            title="Contact Us"
+          >
+            <HelpCircle className="h-5 w-5 text-primary" />
+          </a>
           <div className="w-10 h-10 rounded-full ml-2 overflow-hidden bg-muted flex items-center justify-center" aria-label="User avatar">
             <img alt="User avatar" className="w-full h-full object-cover" src="/lovable-uploads/7e01bcf8-efa4-4e54-8767-386c6ea1fae1.jpg" />
           </div>

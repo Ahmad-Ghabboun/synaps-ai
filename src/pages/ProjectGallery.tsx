@@ -69,8 +69,7 @@ function ProjectCard({ project }: { project: Project }) {
   };
 
   const handleDelete = () => {
-    dispatch({ type: "DELETE_PROJECT", id: project.id });
-    toast.success("Project deleted");
+    toast.info("Cannot delete projects in demo mode");
   };
 
   const hasAudit = project.auditResult || project.score > 0;
@@ -405,32 +404,7 @@ export default function ProjectGallery() {
   );
 
   const handleCreate = () => {
-    if (!projectName.trim()) {
-      toast.error("Project name is required");
-      return;
-    }
-    const newProject: Project = {
-      id: `proj-${Date.now()}`,
-      name: projectName.trim(),
-      description: description.trim(),
-      persona,
-      deadline: deadline?.toISOString(),
-      sqap: "",
-      auditResult: null,
-      score: 0,
-      grade: "-",
-      files: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    dispatch({ type: "ADD_PROJECT", project: newProject });
-    dispatch({ type: "SET_CURRENT_PROJECT", id: newProject.id });
-    setModalOpen(false);
-    setProjectName("");
-    setPersona("TPM");
-    setDeadline(undefined);
-    setDescription("");
-    navigate("/workspace");
+    toast.info("Cannot create projects in demo mode");
   };
 
   return (

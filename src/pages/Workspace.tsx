@@ -19,7 +19,8 @@ import {
   AlertTriangle,
   AlertCircle,
   GripVertical,
-  Github } from
+  Github,
+  ExternalLink } from
 "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
@@ -35,9 +36,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import SettingsDialog from "@/components/SettingsDialog";
+import JiraSettingsModal from "@/components/JiraSettingsModal";
 import { SkillsStatus } from "@/components/SkillsStatus";
 import AuditDashboard from "@/components/AuditDashboard";
 import { supabase } from "@/integrations/supabase/client";
+import { useJira, JiraTicket } from "@/hooks/useJira";
 
 // Parse SQAP markdown into sections
 function parseSqapSections(sqap: string): {title: string;content: string;}[] {
@@ -116,8 +119,23 @@ function RenderMarkdown({ text }: {text: string;}) {
 
 
 // Risk card
-function RiskCard({ risk, onFix, onDismiss }: {risk: Risk;onFix: (risk: Risk) => void;onDismiss: (risk: Risk) => void;}) {
+function RiskCard({
+  risk,
+  onFix,
+  onDismiss,
+  onCreateJira,
+  jiraTicket,
+  isCreatingJira,
+}: {
+  risk: Risk;
+  onFix: (risk: Risk) => void;
+  onDismiss: (risk: Risk) => void;
+  onCreateJira?: (risk: Risk) => void;
+  jiraTicket?: JiraTicket | null;
+  isCreatingJira?: boolean;
+}) {
   const isCritical = risk.severity === "critical";
+  const isHighConfidence = risk.confidence === "high";
   const [isExpanded, setIsExpanded] = useState(false);
 
   const containerClasses = isCritical ?
@@ -136,9 +154,23 @@ function RiskCard({ risk, onFix, onDismiss }: {risk: Risk;onFix: (risk: Risk) =>
       <AlertCircle className={`h-6 w-6 mr-4 shrink-0 ${iconColor}`} />
 
       <div className="flex-1">
-        <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-          {risk.title}
-        </h4>
+        <div className="flex items-center gap-2 flex-wrap">
+          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
+            {risk.title}
+          </h4>
+          {jiraTicket && (
+            <a
+              href={jiraTicket.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+            >
+              {jiraTicket.key}
+              <ExternalLink className="h-2.5 w-2.5" />
+            </a>
+          )}
+        </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
           Tap to view details
         </p>
@@ -147,7 +179,7 @@ function RiskCard({ risk, onFix, onDismiss }: {risk: Risk;onFix: (risk: Risk) =>
       <div className="ml-4 text-gray-400 dark:text-gray-500">
         {isExpanded ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
       </div>
-      
+
       {isExpanded &&
       <div className="w-full mt-4 pl-10">
           <p className={`text-sm mb-2 ${isCritical ? "text-red-800 dark:text-red-200" : "text-orange-800 dark:text-orange-200"}`}>
@@ -156,29 +188,62 @@ function RiskCard({ risk, onFix, onDismiss }: {risk: Risk;onFix: (risk: Risk) =>
           <p className={`text-xs mb-3 ${isCritical ? "text-red-600/80 dark:text-red-400/80" : "text-orange-600/80 dark:text-orange-400/80"}`}>
             Section: {risk.section}
           </p>
-          <div className="flex items-center justify-between">
-            <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onFix(risk);
-            }}
-            disabled={risk.isFixing}
-            className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-3">
+              <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onFix(risk);
+              }}
+              disabled={risk.isFixing}
+              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors">
+                {risk.isFixing ?
+                <Loader2 className="h-4 w-4 animate-spin" /> :
+                <Sparkles className="h-4 w-4" />
+                }
+                {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
+              </button>
 
-              {risk.isFixing ?
-            <Loader2 className="h-4 w-4 animate-spin" /> :
+              {isHighConfidence && onCreateJira && !jiraTicket && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onCreateJira(risk);
+                  }}
+                  disabled={isCreatingJira}
+                  className="flex items-center gap-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-500 dark:hover:text-blue-300 hover:underline disabled:opacity-50 transition-colors"
+                >
+                  {isCreatingJira ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.004-1.005zm5.723-5.756H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.762a1.005 1.005 0 0 0-1.001-1.005zM23.013 0H11.455a5.215 5.215 0 0 0 5.214 5.215h2.129v2.057A5.215 5.215 0 0 0 24.016 12.49V1.005A1.005 1.005 0 0 0 23.013 0z" />
+                    </svg>
+                  )}
+                  {isCreatingJira ? "Creating..." : "CREATE JIRA TICKET"}
+                </button>
+              )}
 
-            <Sparkles className="h-4 w-4" />
-            }
-              {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
-            </button>
+              {jiraTicket && (
+                <a
+                  href={jiraTicket.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/50 dark:border-blue-800 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
+                >
+                  Added to Jira · {jiraTicket.key}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              )}
+            </div>
+
             <button
             onClick={(e) => {
               e.stopPropagation();
               onDismiss(risk);
             }}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-
               Dismiss
             </button>
           </div>
@@ -208,6 +273,8 @@ export default function Workspace() {
   const location = useLocation();
   const { state, dispatch, currentProject, updateCurrentProject } = useApp();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [jiraModalOpen, setJiraModalOpen] = useState(false);
+  const { tickets: jiraTickets, creating: jiraCreating, hasConfig: hasJiraConfig, refreshConfig: refreshJiraConfig, createTicket: createJiraTicket } = useJira();
   const [inputText, setInputText] = useState("");
   const [activeTab, setActiveTab] = useState("audit");
   const [sqapContent, setSqapContent] = useState("");
@@ -645,6 +712,26 @@ export default function Workspace() {
 
 
 
+  async function handleCreateJira(risk: Risk) {
+    if (!hasJiraConfig) {
+      setJiraModalOpen(true);
+      return;
+    }
+    try {
+      const ticket = await createJiraTicket(risk);
+      toast.success(
+        <span>
+          Ticket <strong>{ticket.key}</strong> created.{" "}
+          <a href={ticket.url} target="_blank" rel="noopener noreferrer" className="underline">
+            View in Jira
+          </a>
+        </span>
+      );
+    } catch (err: any) {
+      toast.error("Jira error: " + (err.message || "Unknown error"));
+    }
+  }
+
   function handleCopySection(content: string, index: number) {
     navigator.clipboard.writeText(content);
     setCopiedSectionIndex(index);
@@ -970,7 +1057,15 @@ export default function Workspace() {
                 <div className="space-y-3">
                   {activeAudit?.risks && activeAudit.risks.length > 0 ?
                   activeAudit.risks.map((risk: Risk) =>
-                  <RiskCard key={risk.id} risk={risk} onFix={handleFix} onDismiss={handleDismiss} />
+                  <RiskCard
+                    key={risk.id}
+                    risk={risk}
+                    onFix={handleFix}
+                    onDismiss={handleDismiss}
+                    onCreateJira={handleCreateJira}
+                    jiraTicket={jiraTickets[risk.id] ?? null}
+                    isCreatingJira={jiraCreating === risk.id}
+                  />
                   ) :
 
                   <div className="text-center py-8 text-muted-foreground">
@@ -1019,6 +1114,11 @@ export default function Workspace() {
       </div>
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <JiraSettingsModal
+        open={jiraModalOpen}
+        onOpenChange={setJiraModalOpen}
+        onSaved={refreshJiraConfig}
+      />
     </div>);
 
 }

@@ -34,6 +34,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, isLoading: { ...state.isLoading, ...action.loading } };
     case "SET_SHOW_RAW_JSON":
       return { ...state, showRawJson: action.enabled };
+    case "SET_DEMO_MODE":
+      return { ...state, demoMode: action.enabled };
     default:
       return state;
   }

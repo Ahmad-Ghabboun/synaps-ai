@@ -12,7 +12,7 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
-  demoMode: true,
+  demoMode: false,
   showRawJson: false,
 };
 

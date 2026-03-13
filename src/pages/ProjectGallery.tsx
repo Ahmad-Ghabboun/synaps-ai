@@ -427,8 +427,8 @@ export default function ProjectGallery() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                disabled
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted text-gray-500 dark:text-muted-foreground cursor-not-allowed opacity-60 dark:opacity-50 text-sm font-medium"
+
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
               >
                 <Plus className="h-4 w-4" /> New Project
               </button>

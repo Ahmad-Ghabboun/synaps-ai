@@ -38,55 +38,38 @@ export function useJira() {
 
     setCreating(risk.id);
     try {
-      const credentials = btoa(`${config.email}:${config.apiToken}`);
-      const priority = risk.severity === "critical" ? "Highest" : "Medium";
-
-      const body = {
-        fields: {
-          project: { key: config.projectKey },
-          summary: risk.title,
-          description: {
-            type: "doc",
-            version: 1,
-            content: [
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: risk.description }],
-              },
-              {
-                type: "paragraph",
-                content: [{ type: "text", text: `Impact: ${risk.impact}` }],
-              },
-            ],
+      const response = await fetch(
+        "https://hushfedsqcxipzjcvcre.supabase.co/functions/v1/synaps-ai",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1c2hmZWRzcWN4aXB6amN2Y3JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEzNzgxOTAsImV4cCI6MjA4Njk1NDE5MH0.rmcFx7MrZJHCekyFTY4rQXI1GLDZCUMH3Z3fXUh9Lt4",
           },
-          issuetype: { name: "Bug" },
-          priority: { name: priority },
-          labels: ["synaps-audit"],
-        },
-      };
-
-      const response = await fetch(`${config.baseUrl}/rest/api/3/issue`, {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${credentials}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+          body: JSON.stringify({
+            skill: "jira",
+            jiraBaseUrl: config.baseUrl,
+            jiraEmail: config.email,
+            jiraApiToken: config.apiToken,
+            jiraProjectKey: config.projectKey,
+            gap: risk,
+          }),
+        }
+      );
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
         throw new Error(
-          err.errorMessages?.[0] || err.message || `Jira error ${response.status}`
+          err.error || err.errorMessages?.[0] || `Jira error ${response.status}`
         );
       }
 
       const data = await response.json();
       const ticket: JiraTicket = {
-        id: data.id,
-        key: data.key,
-        url: `${config.baseUrl}/browse/${data.key}`,
+        id: data.result.id,
+        key: data.result.key,
+        url: data.result.url,
       };
 
       const updated = { ...loadTickets(), [risk.id]: ticket };

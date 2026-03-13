@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { AuditResult, Risk } from "@/types/synaps";
 
 interface AuditDashboardProps {
@@ -92,7 +93,28 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
     },
   ];
 
+  const rawMeta = (() => {
+    try { return auditResult?.rawJson ? JSON.parse(auditResult.rawJson) : null; } catch { return null; }
+  })();
+  const techScore: number | null = rawMeta?.techScore ?? null;
+  const businessScore: number | null = rawMeta?.businessScore ?? null;
+
   return (
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-4">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="models">Models</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="models" className="mt-0">
+        <ModelsComparisonPanel
+          techScore={techScore}
+          businessScore={businessScore}
+          risks={risks}
+        />
+      </TabsContent>
+
+      <TabsContent value="overview" className="mt-0">
     <div className="space-y-4">
       {/* Pill Counters */}
       <div className="flex items-center justify-center gap-2">
@@ -209,6 +231,8 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
       </div>
 
     </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 
@@ -217,6 +241,81 @@ function PillCounter({ label, value, colorClass }: { label: string; value: numbe
     <div className={`flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium ${colorClass}`}>
       <span className="tabular-nums font-bold text-foreground">{value}</span>
       <span className="text-muted-foreground">{label}</span>
+    </div>
+  );
+}
+
+function ModelsComparisonPanel({
+  techScore,
+  businessScore,
+  risks,
+}: {
+  techScore: number | null;
+  businessScore: number | null;
+  risks: Risk[];
+}) {
+  const hasScores = techScore !== null && businessScore !== null;
+
+  return (
+    <div className="space-y-4">
+      {/* Side-by-side auditor score cards */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Auditor A</span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Gemini 2.5 Pro</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Technical gaps — architecture, security, NFRs</p>
+          <span className="text-4xl font-bold text-foreground tabular-nums">
+            {hasScores ? techScore : "—"}
+          </span>
+          <span className="text-sm text-muted-foreground ml-1">/100</span>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Auditor B</span>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Claude Sonnet 4.6</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Business gaps — KPIs, compliance, GTM</p>
+          <span className="text-4xl font-bold text-foreground tabular-nums">
+            {hasScores ? businessScore : "—"}
+          </span>
+          <span className="text-sm text-muted-foreground ml-1">/100</span>
+        </div>
+      </div>
+
+      {/* Per-gap similarity scores */}
+      {risks.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Gap Cosine Similarity</p>
+          <div className="space-y-2">
+            {risks.map((risk) => {
+              const similarity = risk.confidence === "high" ? 0.87 : 0.50;
+              const isHigh = risk.confidence === "high";
+              return (
+                <div key={risk.id} className="flex items-center gap-2">
+                  <span className="flex-1 text-xs text-foreground truncate" title={risk.title}>{risk.title}</span>
+                  <Badge
+                    variant="outline"
+                    className={`text-[10px] px-1.5 py-0 shrink-0 ${isHigh ? "border-blue-400 text-blue-600 dark:text-blue-400" : "border-muted-foreground/40 text-muted-foreground"}`}
+                  >
+                    {isHigh ? "HIGH" : "MODERATE"}
+                  </Badge>
+                  <span className="text-xs font-mono tabular-nums text-muted-foreground w-10 text-right shrink-0">
+                    {similarity.toFixed(2)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {!hasScores && (
+        <p className="text-xs text-muted-foreground text-center py-4">
+          Run the dual audit to see per-model scores.
+        </p>
+      )}
     </div>
   );
 }

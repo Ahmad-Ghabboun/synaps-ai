@@ -8,7 +8,7 @@ You are running the **Synaps 2.0 Quality Audit** skill. Follow every step in ord
 
 Ask the user:
 
-> "Please paste your project document below. This can be a Product Requirements Document (PRD), Software Quality Assurance Plan (SQAP), Technical Design Document (TDD), or any other project specification."
+> "Paste your document text below OR upload a .md, .txt, or .pdf file directly into this conversation. This can be a Product Requirements Document (PRD), Software Quality Assurance Plan (SQAP), Technical Design Document (TDD), or any other project specification."
 
 Wait for the user to paste their document.
 

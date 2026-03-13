@@ -146,21 +146,19 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { skill, description, sqap, section, title, description: riskDesc, persona, deadline } = body;
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("LOVABLE_API_KEY is not set");
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
 
     let result: any;
 
     switch (skill) {
       case "architect": {
+        if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
         const systemPrompt = buildArchitectPrompt(persona || "TPM", deadline || "");
         const userMessage = `Project Description:\n${description}\n\nOutput a detailed SQAP in Markdown format.`;
         result = await callLLM(systemPrompt, userMessage, LOVABLE_API_KEY);
         break;
       }
       case "auditor": {
+        if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
         const userMessage = `SQAP Document:\n${sqap}\n\nReturn ONLY valid JSON.`;
         const [techRaw, bizRaw] = await Promise.all([
           callLLM(buildTechAuditorPrompt(persona || "TPM"), userMessage, LOVABLE_API_KEY, "google/gemini-2.5-flash"),
@@ -172,8 +170,50 @@ Deno.serve(async (req) => {
         break;
       }
       case "optimizer": {
+        if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
         const userMessage = `Flawed Section: ${section}\nIssue: ${title}\nDescription: ${riskDesc}\n\nOriginal SQAP:\n${sqap}\n\nOutput the full corrected SQAP in Markdown.`;
         result = await callLLM(OPTIMIZER_PROMPT, userMessage, LOVABLE_API_KEY);
+        break;
+      }
+      case "jira": {
+        const { jiraBaseUrl, jiraEmail, jiraApiToken, jiraProjectKey, gap } = body;
+        if (!jiraBaseUrl || !jiraEmail || !jiraApiToken || !jiraProjectKey || !gap) {
+          return new Response(JSON.stringify({ error: "Missing Jira configuration fields" }), {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const credentials = btoa(`${jiraEmail}:${jiraApiToken}`);
+        const priority = gap.severity === "critical" ? "Highest" : "Medium";
+        const jiraBody = {
+          fields: {
+            project: { key: jiraProjectKey },
+            summary: gap.title,
+            description: `${gap.description}\n\nImpact: ${gap.impact}`,
+            issuetype: { name: "Bug" },
+            priority: { name: priority },
+            labels: ["synaps-audit"],
+          },
+        };
+        const jiraResponse = await fetch(`${jiraBaseUrl}/rest/api/2/issue`, {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${credentials}`,
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(jiraBody),
+        });
+        if (!jiraResponse.ok) {
+          const err = await jiraResponse.json().catch(() => ({}));
+          throw new Error(err.errorMessages?.[0] || err.message || `Jira error ${jiraResponse.status}`);
+        }
+        const jiraData = await jiraResponse.json();
+        result = {
+          id: jiraData.id,
+          key: jiraData.key,
+          url: `${jiraBaseUrl}/browse/${jiraData.key}`,
+        };
         break;
       }
       default:

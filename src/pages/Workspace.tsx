@@ -298,6 +298,10 @@ export default function Workspace() {
   const [inputText, setInputText] = useState("");
   const [activeTab, setActiveTab] = useState("audit");
   const [sqapContent, setSqapContent] = useState("");
+  const [displayedSqapContent, setDisplayedSqapContent] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const typewriterRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevSqapContentRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [rightPanelWidth, setRightPanelWidth] = useState(35);
   const [isDragging, setIsDragging] = useState(false);
@@ -446,8 +450,47 @@ export default function Workspace() {
   useEffect(() => {
     if (!currentProject) return;
     const sqapFile = currentProject.files?.find((f) => f.name === "SQAP.md");
-    setSqapContent(sqapFile?.content || currentProject.sqap || "");
+    const newContent = sqapFile?.content || currentProject.sqap || "";
+    setSqapContent(newContent);
+
+    const prev = prevSqapContentRef.current;
+    prevSqapContentRef.current = newContent;
+
+    if (!newContent) {
+      if (typewriterRef.current) { clearInterval(typewriterRef.current); typewriterRef.current = null; }
+      setIsStreaming(false);
+      setDisplayedSqapContent("");
+      return;
+    }
+
+    // prev === null: initial mount with existing content → set directly, no typewriter
+    // prev === "": content was empty, now generated → typewrite
+    // prev non-empty: optimizer fix or re-generation → set directly
+    if (prev !== "") {
+      setDisplayedSqapContent(newContent);
+      return;
+    }
+
+    // New generation from empty → run typewriter at 8ms/char
+    if (typewriterRef.current) clearInterval(typewriterRef.current);
+    let i = 0;
+    setIsStreaming(true);
+    setDisplayedSqapContent("");
+    typewriterRef.current = setInterval(() => {
+      i++;
+      setDisplayedSqapContent(newContent.slice(0, i));
+      if (i >= newContent.length) {
+        clearInterval(typewriterRef.current!);
+        typewriterRef.current = null;
+        setIsStreaming(false);
+      }
+    }, 8);
   }, [currentProject?.files, currentProject?.sqap]);
+
+  // Cleanup typewriter on unmount
+  useEffect(() => {
+    return () => { if (typewriterRef.current) clearInterval(typewriterRef.current); };
+  }, []);
 
   // Resizing logic
   const startResizing = useCallback((e: React.MouseEvent) => {
@@ -514,7 +557,7 @@ export default function Workspace() {
 
   if (!currentProject) return null;
 
-  const sections = parseSqapSections(sqapContent);
+  const sections = parseSqapSections(displayedSqapContent);
 
   // Read audit from files array
   const auditFile = currentProject.files?.find((f) => f.name === "Audit.json");
@@ -1042,6 +1085,7 @@ export default function Workspace() {
                   <p className="text-muted-foreground">Generating SQAP...</p>
                 </div> :
               sections.length > 0 ?
+              <>
               <Accordion type="multiple" defaultValue={sections.map((_, i) => `section-${i}`)}>
                   {sections.map((section, i) =>
                 <AccordionItem key={i} value={`section-${i}`}>
@@ -1088,7 +1132,14 @@ export default function Workspace() {
                       </AccordionContent>
                     </AccordionItem>
                 )}
-                </Accordion> :
+                </Accordion>
+                {isStreaming && (
+                  <div className="flex items-center gap-2 mt-3 px-1">
+                    <span className="inline-block w-0.5 h-4 bg-primary rounded animate-pulse" />
+                    <span className="text-xs text-muted-foreground">Generating...</span>
+                  </div>
+                )}
+              </> :
 
               <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                   <FileText className="h-12 w-12 mb-3 opacity-30" />

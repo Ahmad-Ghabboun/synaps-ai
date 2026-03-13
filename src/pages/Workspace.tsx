@@ -37,6 +37,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import SettingsDialog from "@/components/SettingsDialog";
 import JiraSettingsModal from "@/components/JiraSettingsModal";
 import { SkillsStatus } from "@/components/SkillsStatus";

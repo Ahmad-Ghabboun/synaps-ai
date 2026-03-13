@@ -20,7 +20,9 @@ import {
   AlertCircle,
   GripVertical,
   Github,
-  ExternalLink } from
+  ExternalLink,
+  Pencil,
+  Share2 } from
 "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";

@@ -310,6 +310,14 @@ export default function Workspace() {
   const uploadRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Inline SQAP editing state
+  const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
+  const [editSectionContent, setEditSectionContent] = useState("");
+  const [modifiedSections, setModifiedSections] = useState<Set<number>>(new Set());
+  const [isReAuditing, setIsReAuditing] = useState(false);
+
+  // Share modal state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // GitHub Integration State
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);

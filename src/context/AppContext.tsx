@@ -55,8 +55,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Always load only the demo project
   useEffect(() => {
-    dispatch({ type: "SET_PROJECTS", projects: [DEMO_PROJECT] });
-  }, []);
+    dispatch({ type: "SET_PROJECTS", projects: state.demoMode ? [DEMO_PROJECT] : [] });
+  }, [state.demoMode]);
 
   const currentProject =
     state.projects.find((p) => p.id === state.currentProjectId) || null;

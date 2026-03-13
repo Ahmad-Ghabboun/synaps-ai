@@ -1,37 +1,41 @@
 
 
-# UI Layout Adjustments in ProjectGallery
+## Plan: Five Feature Additions
 
-## Changes — all in `src/pages/ProjectGallery.tsx`
+### 1. New Project Creation (ProjectGallery.tsx)
+Replace the `handleCreate` toast with real logic:
+- Validate `projectName` is not empty
+- Create a `Project` with `crypto.randomUUID()`, all required fields, score 0, grade "F", empty sqap/files
+- Dispatch `SET_PROJECTS` appending to existing array, `SET_CURRENT_PROJECT` with new id
+- Close modal, navigate to `/workspace`
 
-### 1. Restructure the header area (lines 417-440)
-- **Top row**: "Dashboard" heading on left, "Contact Us" button on right (remove from the `gap-3` div with New Project)
-- **Second row**: Disabled "New Project" button below the heading, left-aligned
-- **Third row**: Projects grid below
+### 2. Demo Mode Toggle (already done)
+The context and workspace already have a working toggle from the last edit. `SET_DEMO_MODE` action exists, the useEffect reacts to `state.demoMode`, and the Switch is wired up. No changes needed.
 
-### 2. Light-mode-only darker gray for disabled New Project button (line 424)
-- Change from `bg-muted text-muted-foreground opacity-50` to use a class that's darker in light mode only
-- Use `dark:text-muted-foreground dark:opacity-50 text-gray-500 opacity-70` or similar so light mode gets a more visible gray while dark mode stays unchanged
+### 3. Inline SQAP Editing (Workspace.tsx)
+Add per-section inline editing in the Artifact accordion:
+- New state: `editingSectionIndex`, `editSectionContent`, `modifiedSections` (Set of indices)
+- Pencil icon on each section header (visible on hover, next to copy button)
+- Clicking pencil sets edit mode for that section with a textarea + Save/Cancel buttons
+- Save reassembles markdown from all sections, calls `updateCurrentProject({ sqap, files })`, adds index to `modifiedSections`, toasts "Section saved"
+- Yellow "Modified" badge on edited sections
+- "Re-Audit" button next to "The Artifact" title, visible when `sqapContent` and `activeAudit` exist
+- Re-Audit calls `callSkill("auditor", ...)`, updates project, clears `modifiedSections`, shows spinner while running
 
-### Layout structure after changes:
-```text
-┌─────────────────────────────────────────────┐
-│  Dashboard                      [Contact Us]│  ← top row
-│  [+ New Project] (disabled, tooltip)        │  ← second row, left-aligned
-│                                             │
-│  ┌─────────┐ ┌─────────┐ ┌─────────┐       │  ← grid below
-│  │ Project  │ │ Project  │ │ Project  │       │
-│  └─────────┘ └─────────┘ └─────────┘       │
-└─────────────────────────────────────────────┘
-```
+### 4. Gap Severity Labels (Workspace.tsx RiskCard)
+Add a severity pill badge in each RiskCard header:
+- Map severity to color: `critical` → red, `moderate` → yellow
+- Also support `high` → orange, `low` → blue for future use
+- Use the existing `Badge` component with custom className for pill colors
 
-### Specific edits (lines 417-441):
-Replace the current header + grid layout with:
-1. A flex row: `<h1>Dashboard</h1>` + Contact Us `<a>` button (right-aligned)
-2. A `<div className="mb-6">` containing the disabled New Project button with tooltip
-3. The projects grid unchanged below
+### 5. Viewer Sharing Modal (Workspace.tsx)
+- Add `Share2` icon button in top nav bar
+- New state `shareModalOpen`
+- Modal shows: shareable URL, project summary (name, score, grade, gap count), Copy Link button, Share via Email button (mailto:), Download Report button
+- Uses existing Dialog component
 
-### Light mode color fix:
-- Button classes: `bg-muted text-gray-500 dark:text-muted-foreground cursor-not-allowed opacity-60 dark:opacity-50`
-- This makes the text/icon slightly darker gray in light mode only
+### Files to modify:
+- **src/pages/ProjectGallery.tsx** — `handleCreate` implementation
+- **src/pages/Workspace.tsx** — Inline editing, severity badges on RiskCard, share modal, re-audit button
+- **src/components/AuditDashboard.tsx** — No changes needed (severity labels go on RiskCard in gap feed, not dashboard)
 

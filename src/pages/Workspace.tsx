@@ -775,6 +775,77 @@ export default function Workspace() {
     toast.success("Full artifact copied to clipboard");
   }
 
+  // Inline SQAP editing
+  function handleStartEdit(index: number, content: string) {
+    setEditingSectionIndex(index);
+    setEditSectionContent(content);
+  }
+
+  function handleSaveSection(index: number) {
+    const updatedSections = sections.map((s, i) =>
+      i === index ? { ...s, content: editSectionContent } : s
+    );
+    const newSqap = updatedSections.map((s) => `## ${s.title}\n\n${s.content}`).join("\n\n");
+    updateCurrentProject({ sqap: newSqap, files: buildFiles(newSqap, activeAudit) });
+    setModifiedSections((prev) => new Set(prev).add(index));
+    setEditingSectionIndex(null);
+    toast.success("Section saved");
+  }
+
+  function handleCancelEdit() {
+    setEditingSectionIndex(null);
+    setEditSectionContent("");
+  }
+
+  async function handleReAudit() {
+    if (!sqapContent || !activeAudit) return;
+    setIsReAuditing(true);
+    try {
+      const persona = currentProject?.persona || "TPM";
+      const deadline = currentProject?.deadline || "";
+      const auditData = await callSkill("auditor", { sqap: sqapContent, persona, deadline });
+      const auditResult = auditData.result;
+      const allFiles = buildFiles(sqapContent, auditResult);
+      updateCurrentProject({
+        auditResult,
+        score: auditResult.qualityScore,
+        grade: auditResult.grade,
+        files: allFiles,
+      });
+      setModifiedSections(new Set());
+      toast.success("Re-audit complete — score updated");
+    } catch (err: any) {
+      toast.error("Re-audit failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsReAuditing(false);
+    }
+  }
+
+  // Share modal helpers
+  function getShareUrl() {
+    return `${window.location.origin}/view/${currentProject.id}`;
+  }
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(getShareUrl());
+    toast.success("Link copied");
+  }
+
+  function handleShareEmail() {
+    const gapCount = activeAudit?.risks?.length || 0;
+    const subject = encodeURIComponent(`Synaps Audit: ${currentProject.name}`);
+    const body = encodeURIComponent(
+      `Project: ${currentProject.name}\nScore: ${currentProject.score}%\nGrade: ${currentProject.grade}\nGaps: ${gapCount}\n\nView: ${getShareUrl()}`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  }
+
+  function handleDownloadReport() {
+    const sqapFile = projectFiles.find((f) => f.name === "SQAP.md");
+    if (sqapFile) handleDownloadFile(sqapFile);
+    else toast.error("No SQAP file to download");
+  }
+
   function handleDownloadFile(file: FileObject) {
     const mimeMap: Record<string, string> = { md: "text/markdown", json: "application/json", csv: "text/csv", pdf: "application/pdf" };
     const blob = new Blob([file.content], { type: mimeMap[file.type] || "text/plain" });

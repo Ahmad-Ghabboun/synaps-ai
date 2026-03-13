@@ -936,6 +936,12 @@ export default function Workspace() {
         </div>
         <div className="flex items-center gap-2 relative z-10">
           <button
+            onClick={() => setShareModalOpen(true)}
+            className="hover:bg-muted rounded-lg p-2 transition-colors"
+            aria-label="Share project">
+            <Share2 className="h-5 w-5 text-muted-foreground" />
+          </button>
+          <button
             onClick={toggleSync}
             className={`rounded-lg p-2 transition-all duration-300 ${
             isSyncOn ?

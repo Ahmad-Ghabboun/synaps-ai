@@ -1258,6 +1258,43 @@ export default function Workspace() {
         onOpenChange={setJiraModalOpen}
         onSaved={refreshJiraConfig}
       />
+
+      {/* Share Modal */}
+      <Dialog open={shareModalOpen} onOpenChange={setShareModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Share Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="bg-muted rounded-lg p-4 space-y-2">
+              <p className="text-sm font-semibold text-foreground">{currentProject.name}</p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>Score: <strong className="text-foreground">{currentProject.score}%</strong></span>
+                <span>Grade: <strong className="text-foreground">{currentProject.grade}</strong></span>
+                <span>Gaps: <strong className="text-foreground">{activeAudit?.risks?.length || 0}</strong></span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={getShareUrl()}
+                className="flex-1 bg-muted rounded-md border border-input px-3 py-2 text-sm text-foreground"
+              />
+              <Button size="sm" onClick={handleCopyLink}>
+                <Copy className="h-4 w-4 mr-1" /> Copy Link
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={handleShareEmail}>
+                <Send className="h-4 w-4 mr-1" /> Share via Email
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={handleDownloadReport} disabled={!projectFiles.find((f) => f.name === "SQAP.md")}>
+                <Download className="h-4 w-4 mr-1" /> Download Report
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>);
 
 }

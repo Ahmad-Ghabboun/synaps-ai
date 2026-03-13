@@ -406,7 +406,31 @@ export default function ProjectGallery() {
   );
 
   const handleCreate = () => {
-    toast.info("Cannot create projects in demo mode");
+    if (!projectName.trim()) {
+      toast.error("Please enter a project name");
+      return;
+    }
+    const newProject: Project = {
+      id: crypto.randomUUID(),
+      name: projectName.trim(),
+      description: description.trim(),
+      persona,
+      deadline: deadline ? deadline.toISOString() : undefined,
+      sqap: "",
+      auditResult: null,
+      score: 0,
+      grade: "F",
+      files: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    dispatch({ type: "SET_PROJECTS", projects: [...state.projects, newProject] });
+    dispatch({ type: "SET_CURRENT_PROJECT", id: newProject.id });
+    setModalOpen(false);
+    setProjectName("");
+    setDescription("");
+    setDeadline(undefined);
+    navigate("/workspace");
   };
 
   return (

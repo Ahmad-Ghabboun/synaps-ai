@@ -20,7 +20,9 @@ import {
   AlertCircle,
   GripVertical,
   Github,
-  ExternalLink } from
+  ExternalLink,
+  Pencil,
+  Share2 } from
 "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
@@ -35,6 +37,13 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import SettingsDialog from "@/components/SettingsDialog";
 import JiraSettingsModal from "@/components/JiraSettingsModal";
 import { SkillsStatus } from "@/components/SkillsStatus";
@@ -134,6 +143,14 @@ function RiskCard({
   jiraTicket?: JiraTicket | null;
   isCreatingJira?: boolean;
 }) {
+  const severityConfig: Record<string, { label: string; className: string }> = {
+    critical: { label: "CRITICAL", className: "bg-red-500/15 text-red-700 border-red-300 dark:text-red-300 dark:border-red-700" },
+    high: { label: "HIGH", className: "bg-orange-500/15 text-orange-700 border-orange-300 dark:text-orange-300 dark:border-orange-700" },
+    moderate: { label: "MODERATE", className: "bg-yellow-500/15 text-yellow-700 border-yellow-300 dark:text-yellow-300 dark:border-yellow-700" },
+    low: { label: "LOW", className: "bg-blue-500/15 text-blue-700 border-blue-300 dark:text-blue-300 dark:border-blue-700" },
+  };
+  const sevInfo = severityConfig[risk.severity] || severityConfig.moderate;
+
   const isCritical = risk.severity === "critical";
   const isHighConfidence = risk.confidence === "high";
   const [isExpanded, setIsExpanded] = useState(false);
@@ -158,6 +175,9 @@ function RiskCard({
           <h4 className="font-semibold text-gray-900 dark:text-gray-100">
             {risk.title}
           </h4>
+          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 font-bold ${sevInfo.className}`}>
+            {sevInfo.label}
+          </Badge>
           {jiraTicket && (
             <a
               href={jiraTicket.url}
@@ -290,6 +310,14 @@ export default function Workspace() {
   const uploadRef = useRef<HTMLInputElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
+  // Inline SQAP editing state
+  const [editingSectionIndex, setEditingSectionIndex] = useState<number | null>(null);
+  const [editSectionContent, setEditSectionContent] = useState("");
+  const [modifiedSections, setModifiedSections] = useState<Set<number>>(new Set());
+  const [isReAuditing, setIsReAuditing] = useState(false);
+
+  // Share modal state
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   // GitHub Integration State
   const [isGitHubConnected, setIsGitHubConnected] = useState(false);
@@ -747,6 +775,77 @@ export default function Workspace() {
     toast.success("Full artifact copied to clipboard");
   }
 
+  // Inline SQAP editing
+  function handleStartEdit(index: number, content: string) {
+    setEditingSectionIndex(index);
+    setEditSectionContent(content);
+  }
+
+  function handleSaveSection(index: number) {
+    const updatedSections = sections.map((s, i) =>
+      i === index ? { ...s, content: editSectionContent } : s
+    );
+    const newSqap = updatedSections.map((s) => `## ${s.title}\n\n${s.content}`).join("\n\n");
+    updateCurrentProject({ sqap: newSqap, files: buildFiles(newSqap, activeAudit) });
+    setModifiedSections((prev) => new Set(prev).add(index));
+    setEditingSectionIndex(null);
+    toast.success("Section saved");
+  }
+
+  function handleCancelEdit() {
+    setEditingSectionIndex(null);
+    setEditSectionContent("");
+  }
+
+  async function handleReAudit() {
+    if (!sqapContent || !activeAudit) return;
+    setIsReAuditing(true);
+    try {
+      const persona = currentProject?.persona || "TPM";
+      const deadline = currentProject?.deadline || "";
+      const auditData = await callSkill("auditor", { sqap: sqapContent, persona, deadline });
+      const auditResult = auditData.result;
+      const allFiles = buildFiles(sqapContent, auditResult);
+      updateCurrentProject({
+        auditResult,
+        score: auditResult.qualityScore,
+        grade: auditResult.grade,
+        files: allFiles,
+      });
+      setModifiedSections(new Set());
+      toast.success("Re-audit complete — score updated");
+    } catch (err: any) {
+      toast.error("Re-audit failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsReAuditing(false);
+    }
+  }
+
+  // Share modal helpers
+  function getShareUrl() {
+    return `${window.location.origin}/view/${currentProject.id}`;
+  }
+
+  function handleCopyLink() {
+    navigator.clipboard.writeText(getShareUrl());
+    toast.success("Link copied");
+  }
+
+  function handleShareEmail() {
+    const gapCount = activeAudit?.risks?.length || 0;
+    const subject = encodeURIComponent(`Synaps Audit: ${currentProject.name}`);
+    const body = encodeURIComponent(
+      `Project: ${currentProject.name}\nScore: ${currentProject.score}%\nGrade: ${currentProject.grade}\nGaps: ${gapCount}\n\nView: ${getShareUrl()}`
+    );
+    window.open(`mailto:?subject=${subject}&body=${body}`);
+  }
+
+  function handleDownloadReport() {
+    const sqapFile = projectFiles.find((f) => f.name === "SQAP.md");
+    if (sqapFile) handleDownloadFile(sqapFile);
+    else toast.error("No SQAP file to download");
+  }
+
   function handleDownloadFile(file: FileObject) {
     const mimeMap: Record<string, string> = { md: "text/markdown", json: "application/json", csv: "text/csv", pdf: "application/pdf" };
     const blob = new Blob([file.content], { type: mimeMap[file.type] || "text/plain" });
@@ -837,6 +936,12 @@ export default function Workspace() {
         </div>
         <div className="flex items-center gap-2 relative z-10">
           <button
+            onClick={() => setShareModalOpen(true)}
+            className="hover:bg-muted rounded-lg p-2 transition-colors"
+            aria-label="Share project">
+            <Share2 className="h-5 w-5 text-muted-foreground" />
+          </button>
+          <button
             onClick={toggleSync}
             className={`rounded-lg p-2 transition-all duration-300 ${
             isSyncOn ?
@@ -893,7 +998,20 @@ export default function Workspace() {
           {/* Left Panel - The Artifact */}
           <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
+                {sqapContent && activeAudit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReAudit}
+                    disabled={isReAuditing}
+                  >
+                    {isReAuditing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                    Re-Audit
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <input ref={uploadRef} type="file" accept=".md,.txt,.csv" className="hidden" onChange={handleUploadFile} />
                 <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
@@ -912,7 +1030,6 @@ export default function Workspace() {
                   onClick={handleCopyWhole}
                   className="w-9 px-0"
                   title="Copy entire artifact">
-
                   {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
@@ -931,21 +1048,43 @@ export default function Workspace() {
                       <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center gap-2">
                           <span className="text-base font-bold">{section.title}</span>
+                          {modifiedSections.has(i) && (
+                            <Badge className="bg-yellow-500/15 text-yellow-700 border-yellow-300 dark:text-yellow-300 dark:border-yellow-700 text-[10px] px-1.5 py-0">Modified</Badge>
+                          )}
                           <button
-                        onClick={(e) => {e.stopPropagation();handleCopySection(section.content, i);}}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
-                        aria-label={`Copy ${section.title}`}>
-
+                            onClick={(e) => { e.stopPropagation(); handleStartEdit(i, section.content); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                            aria-label={`Edit ${section.title}`}>
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={(e) => {e.stopPropagation();handleCopySection(section.content, i);}}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                            aria-label={`Copy ${section.title}`}>
                             {copiedSectionIndex === i ?
-                        <Check className="h-3.5 w-3.5 text-green-500" /> :
-
-                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                        }
+                              <Check className="h-3.5 w-3.5 text-green-500" /> :
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            }
                           </button>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <RenderMarkdown text={section.content} />
+                        {editingSectionIndex === i ? (
+                          <div className="space-y-3">
+                            <Textarea
+                              value={editSectionContent}
+                              onChange={(e) => setEditSectionContent(e.target.value)}
+                              className="min-h-[150px] text-sm font-mono"
+                              rows={8}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                              <Button size="sm" onClick={() => handleSaveSection(i)}>Save</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <RenderMarkdown text={section.content} />
+                        )}
                       </AccordionContent>
                     </AccordionItem>
                 )}
@@ -1119,6 +1258,43 @@ export default function Workspace() {
         onOpenChange={setJiraModalOpen}
         onSaved={refreshJiraConfig}
       />
+
+      {/* Share Modal */}
+      <Dialog open={shareModalOpen} onOpenChange={setShareModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Share Project</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div className="bg-muted rounded-lg p-4 space-y-2">
+              <p className="text-sm font-semibold text-foreground">{currentProject.name}</p>
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span>Score: <strong className="text-foreground">{currentProject.score}%</strong></span>
+                <span>Grade: <strong className="text-foreground">{currentProject.grade}</strong></span>
+                <span>Gaps: <strong className="text-foreground">{activeAudit?.risks?.length || 0}</strong></span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={getShareUrl()}
+                className="flex-1 bg-muted rounded-md border border-input px-3 py-2 text-sm text-foreground"
+              />
+              <Button size="sm" onClick={handleCopyLink}>
+                <Copy className="h-4 w-4 mr-1" /> Copy Link
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={handleShareEmail}>
+                <Send className="h-4 w-4 mr-1" /> Share via Email
+              </Button>
+              <Button variant="outline" className="flex-1" onClick={handleDownloadReport} disabled={!projectFiles.find((f) => f.name === "SQAP.md")}>
+                <Download className="h-4 w-4 mr-1" /> Download Report
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>);
 
 }

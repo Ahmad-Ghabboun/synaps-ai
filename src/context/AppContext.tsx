@@ -6,7 +6,8 @@ type Action =
   | { type: "UPDATE_PROJECT"; project: Project }
   | { type: "SET_CURRENT_PROJECT"; id: string | null }
   | { type: "SET_LOADING"; loading: Partial<LoadingState> }
-  | { type: "SET_SHOW_RAW_JSON"; enabled: boolean };
+  | { type: "SET_SHOW_RAW_JSON"; enabled: boolean }
+  | { type: "SET_DEMO_MODE"; enabled: boolean };
 
 const initialState: AppState = {
   projects: [],
@@ -33,6 +34,8 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, isLoading: { ...state.isLoading, ...action.loading } };
     case "SET_SHOW_RAW_JSON":
       return { ...state, showRawJson: action.enabled };
+    case "SET_DEMO_MODE":
+      return { ...state, demoMode: action.enabled };
     default:
       return state;
   }

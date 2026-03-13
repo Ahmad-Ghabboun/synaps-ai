@@ -992,7 +992,20 @@ export default function Workspace() {
           {/* Left Panel - The Artifact */}
           <section className="flex-1 bg-card rounded-xl border border-border shadow-sm p-6 flex flex-col overflow-hidden min-w-0">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-foreground">The Artifact</h2>
+                {sqapContent && activeAudit && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleReAudit}
+                    disabled={isReAuditing}
+                  >
+                    {isReAuditing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+                    Re-Audit
+                  </Button>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <input ref={uploadRef} type="file" accept=".md,.txt,.csv" className="hidden" onChange={handleUploadFile} />
                 <Button variant="outline" size="sm" onClick={() => uploadRef.current?.click()}>
@@ -1011,7 +1024,6 @@ export default function Workspace() {
                   onClick={handleCopyWhole}
                   className="w-9 px-0"
                   title="Copy entire artifact">
-
                   {isCopiedWhole ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
@@ -1030,21 +1042,43 @@ export default function Workspace() {
                       <AccordionTrigger className="hover:no-underline group">
                         <div className="flex items-center gap-2">
                           <span className="text-base font-bold">{section.title}</span>
+                          {modifiedSections.has(i) && (
+                            <Badge className="bg-yellow-500/15 text-yellow-700 border-yellow-300 dark:text-yellow-300 dark:border-yellow-700 text-[10px] px-1.5 py-0">Modified</Badge>
+                          )}
                           <button
-                        onClick={(e) => {e.stopPropagation();handleCopySection(section.content, i);}}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
-                        aria-label={`Copy ${section.title}`}>
-
+                            onClick={(e) => { e.stopPropagation(); handleStartEdit(i, section.content); }}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                            aria-label={`Edit ${section.title}`}>
+                            <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                          <button
+                            onClick={(e) => {e.stopPropagation();handleCopySection(section.content, i);}}
+                            className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-muted transition-opacity"
+                            aria-label={`Copy ${section.title}`}>
                             {copiedSectionIndex === i ?
-                        <Check className="h-3.5 w-3.5 text-green-500" /> :
-
-                        <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                        }
+                              <Check className="h-3.5 w-3.5 text-green-500" /> :
+                              <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+                            }
                           </button>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent>
-                        <RenderMarkdown text={section.content} />
+                        {editingSectionIndex === i ? (
+                          <div className="space-y-3">
+                            <Textarea
+                              value={editSectionContent}
+                              onChange={(e) => setEditSectionContent(e.target.value)}
+                              className="min-h-[150px] text-sm font-mono"
+                              rows={8}
+                            />
+                            <div className="flex justify-end gap-2">
+                              <Button size="sm" variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
+                              <Button size="sm" onClick={() => handleSaveSection(i)}>Save</Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <RenderMarkdown text={section.content} />
+                        )}
                       </AccordionContent>
                     </AccordionItem>
                 )}

@@ -143,6 +143,14 @@ function RiskCard({
   jiraTicket?: JiraTicket | null;
   isCreatingJira?: boolean;
 }) {
+  const severityConfig: Record<string, { label: string; className: string }> = {
+    critical: { label: "CRITICAL", className: "bg-red-500/15 text-red-700 border-red-300 dark:text-red-300 dark:border-red-700" },
+    high: { label: "HIGH", className: "bg-orange-500/15 text-orange-700 border-orange-300 dark:text-orange-300 dark:border-orange-700" },
+    moderate: { label: "MODERATE", className: "bg-yellow-500/15 text-yellow-700 border-yellow-300 dark:text-yellow-300 dark:border-yellow-700" },
+    low: { label: "LOW", className: "bg-blue-500/15 text-blue-700 border-blue-300 dark:text-blue-300 dark:border-blue-700" },
+  };
+  const sevInfo = severityConfig[risk.severity] || severityConfig.moderate;
+
   const isCritical = risk.severity === "critical";
   const isHighConfidence = risk.confidence === "high";
   const [isExpanded, setIsExpanded] = useState(false);

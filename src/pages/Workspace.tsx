@@ -175,6 +175,9 @@ function RiskCard({
           <h4 className="font-semibold text-gray-900 dark:text-gray-100">
             {risk.title}
           </h4>
+          <Badge variant="outline" className={`text-[10px] px-1.5 py-0 font-bold ${sevInfo.className}`}>
+            {sevInfo.label}
+          </Badge>
           {jiraTicket && (
             <a
               href={jiraTicket.url}

@@ -25,7 +25,7 @@ import {
   Share2 } from
 "lucide-react";
 import { useApp } from "@/context/AppContext";
-import { Risk, FileObject, DEMO_PROJECT } from "@/types/synaps";
+import { Risk, FileObject, DEMO_PROJECT, DEMO_Q3_PROJECT, DEMO_Q3_SQAP, DEMO_Q3_AUDIT, SEVERITY_SCORE_MAP } from "@/types/synaps";
 import { toast } from "sonner";
 import {
   Accordion,

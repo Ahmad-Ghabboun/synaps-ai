@@ -726,14 +726,20 @@ export default function Workspace() {
     }
 
     if (state.demoMode) {
-      const files = buildFiles(currentProject.sqap, DEMO_PROJECT.auditResult);
-      updateCurrentProject({
-        auditResult: DEMO_PROJECT.auditResult,
-        score: DEMO_PROJECT.score,
-        grade: DEMO_PROJECT.grade,
-        files
-      });
-      toast.success("Demo audit loaded!");
+      dispatch({ type: "SET_LOADING", loading: { auditor: true } });
+      const isQ3 = currentProject.id === "demo-q3-migration";
+      const demoAudit = isQ3 ? DEMO_Q3_AUDIT : DEMO_PROJECT.auditResult;
+      setTimeout(() => {
+        const files = buildFiles(currentProject.sqap, demoAudit);
+        updateCurrentProject({
+          auditResult: demoAudit,
+          score: demoAudit!.qualityScore,
+          grade: demoAudit!.grade,
+          files
+        });
+        dispatch({ type: "SET_LOADING", loading: { auditor: false } });
+        toast.success("Dual audit complete!");
+      }, 3000);
       return;
     }
 

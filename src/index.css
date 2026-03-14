@@ -8,40 +8,28 @@
   :root {
     --background: 40 33% 98%;
     --foreground: 215 28% 17%;
-
     --card: 0 0% 100%;
     --card-foreground: 215 28% 17%;
-
     --popover: 0 0% 100%;
     --popover-foreground: 215 28% 17%;
-
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-
     --secondary: 213 27% 84%;
     --secondary-foreground: 215 28% 17%;
-
     --muted: 210 40% 96%;
     --muted-foreground: 215 16% 47%;
-
     --accent: 210 40% 96%;
     --accent-foreground: 215 28% 17%;
-
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-
     --success: 160 84% 39%;
     --success-foreground: 0 0% 100%;
-
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 217 91% 60%;
-
     --radius: 0.75rem;
-
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
@@ -120,6 +108,16 @@
 @keyframes breathe-glow {
   0%, 100% { box-shadow: 0 0 8px 0 var(--breathe-color, hsl(var(--border))); }
   50% { box-shadow: 0 0 16px 2px var(--breathe-color, hsl(var(--border))); }
+}
+
+/* Red glow for critical deadline icons */
+@keyframes deadline-critical-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px hsl(0 84% 60% / 0.3)); }
+  50% { filter: drop-shadow(0 0 6px hsl(0 84% 60% / 0.6)); }
+}
+
+.deadline-icon-critical {
+  animation: deadline-critical-glow 2s ease-in-out infinite;
 }
 
 /* Ring glow rotation */
@@ -231,6 +229,24 @@
 .dark .audit-pill-yellow {
   border-color: hsl(38 92% 50% / 0.5);
   background: hsl(38 50% 12% / 0.5);
+}
+
+.audit-pill-orange {
+  border-color: hsl(25 95% 53% / 0.4);
+  background: hsl(25 95% 95% / 0.5);
+}
+.dark .audit-pill-orange {
+  border-color: hsl(25 95% 53% / 0.5);
+  background: hsl(25 50% 12% / 0.5);
+}
+
+.audit-pill-blue {
+  border-color: hsl(217 91% 60% / 0.4);
+  background: hsl(217 91% 95% / 0.5);
+}
+.dark .audit-pill-blue {
+  border-color: hsl(217 91% 60% / 0.5);
+  background: hsl(217 50% 12% / 0.5);
 }
 
 .audit-pill-neutral {

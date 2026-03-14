@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback } from "react";
-import { Project, AppState, LoadingState, DEMO_PROJECT } from "@/types/synaps";
+import { Project, AppState, LoadingState, DEMO_GALLERY_PROJECTS } from "@/types/synaps";
 
 type Action =
   | { type: "SET_PROJECTS"; projects: Project[] }
@@ -13,7 +13,13 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
-  demoMode: false,
+  demoMode: (() => {
+    try {
+      return localStorage.getItem("synaps-demo-mode") === "true";
+    } catch {
+      return false;
+    }
+  })(),
   showRawJson: false,
 };
 
@@ -53,9 +59,20 @@ const AppContext = createContext<AppContextValue | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
 
-  // Always load only the demo project
+  // Persist demoMode to localStorage
   useEffect(() => {
-    dispatch({ type: "SET_PROJECTS", projects: state.demoMode ? [DEMO_PROJECT] : [] });
+    try {
+      localStorage.setItem("synaps-demo-mode", String(state.demoMode));
+    } catch {}
+  }, [state.demoMode]);
+
+  // Load projects based on demo mode
+  useEffect(() => {
+    if (state.demoMode) {
+      dispatch({ type: "SET_PROJECTS", projects: [...DEMO_GALLERY_PROJECTS] });
+    } else {
+      dispatch({ type: "SET_PROJECTS", projects: [] });
+    }
   }, [state.demoMode]);
 
   const currentProject =

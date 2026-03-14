@@ -644,15 +644,37 @@ export default function Workspace() {
 
     // Demo mode shortcut
     if (state.demoMode) {
-      const files = buildFiles(DEMO_PROJECT.sqap, DEMO_PROJECT.auditResult);
-      updateCurrentProject({
-        sqap: DEMO_PROJECT.sqap,
-        auditResult: DEMO_PROJECT.auditResult,
-        score: DEMO_PROJECT.score,
-        grade: DEMO_PROJECT.grade,
-        files
-      });
-      toast.success("Demo data loaded!");
+      // Check if this is the Q3 project
+      const isQ3 = currentProject.id === "demo-q3-migration";
+      const demoSqap = isQ3 ? DEMO_Q3_SQAP : DEMO_PROJECT.sqap;
+      const demoAudit = isQ3 ? DEMO_Q3_AUDIT : DEMO_PROJECT.auditResult;
+
+      // Simulate typewriter — set sqap empty first, then fill it
+      updateCurrentProject({ sqap: "", description });
+      
+      // After a brief delay, set the SQAP (typewriter effect runs via useEffect)
+      setTimeout(() => {
+        const files = buildFiles(demoSqap, null);
+        updateCurrentProject({ sqap: demoSqap, files });
+      }, 100);
+      
+      // After typewriter (~8s), auto-run audit with 3s loading sim
+      setTimeout(() => {
+        dispatch({ type: "SET_LOADING", loading: { auditor: true } });
+        setTimeout(() => {
+          const allFiles = buildFiles(demoSqap, demoAudit);
+          updateCurrentProject({
+            auditResult: demoAudit,
+            score: demoAudit!.qualityScore,
+            grade: demoAudit!.grade,
+            files: allFiles,
+          });
+          dispatch({ type: "SET_LOADING", loading: { auditor: false } });
+          setActiveTab("audit");
+          toast.success("Dual audit complete!");
+        }, 3000);
+      }, 9000);
+      
       setInputText("");
       return;
     }

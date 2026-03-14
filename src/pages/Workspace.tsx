@@ -770,10 +770,23 @@ export default function Workspace() {
     if (!sqapContent) return;
 
     if (state.demoMode) {
-      const updatedRisks = activeAudit?.risks.filter((r: Risk) => r.id !== risk.id) || [];
-      const newScore = Math.min(100, currentProject.score + 20);
+      // Mark risk as resolved (don't remove it) and add severity-based points
+      const scoreIncrement = SEVERITY_SCORE_MAP[risk.severity] || 4;
+      const updatedRisks = activeAudit?.risks.map((r: Risk) =>
+        r.id === risk.id ? { ...r, resolved: true } : r
+      ) || [];
+      const newScore = Math.min(100, currentProject.score + scoreIncrement);
       const newGrade = newScore >= 90 ? "A" : newScore >= 80 ? "B" : newScore >= 70 ? "C" : newScore >= 60 ? "D" : "F";
-      const newAudit = { ...activeAudit!, qualityScore: newScore, grade: newGrade, risks: updatedRisks };
+      const isGateUnlocked = newScore >= 95;
+      const newAudit = {
+        ...activeAudit!,
+        qualityScore: newScore,
+        grade: newGrade,
+        risks: updatedRisks,
+        qualityGate: activeAudit?.qualityGate
+          ? { ...activeAudit.qualityGate, locked: !isGateUnlocked }
+          : undefined,
+      };
       const files = buildFiles(currentProject.sqap, newAudit);
       updateCurrentProject({
         auditResult: newAudit,
@@ -781,7 +794,7 @@ export default function Workspace() {
         grade: newGrade,
         files
       });
-      toast.success(`Fixed: ${risk.title}`);
+      toast.success(`Resolved: ${risk.title} (+${scoreIncrement} points)`);
       return;
     }
 

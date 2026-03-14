@@ -151,33 +151,55 @@ function RiskCard({
   };
   const sevInfo = severityConfig[risk.severity] || severityConfig.moderate;
 
+  const isResolved = risk.resolved === true;
   const isCritical = risk.severity === "critical";
   const isHighConfidence = risk.confidence === "high";
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const containerClasses = isCritical ?
-  "bg-red-50 border-red-200 shadow-red-100/50 dark:bg-red-950/40 dark:border-red-900/50" :
-  "bg-orange-50 border-orange-200 shadow-orange-100/50 dark:bg-orange-950/40 dark:border-orange-900/50";
+  const containerClasses = isResolved
+    ? "bg-green-50 border-green-200 shadow-green-100/50 dark:bg-green-950/40 dark:border-green-900/50"
+    : isCritical
+    ? "bg-red-50 border-red-200 shadow-red-100/50 dark:bg-red-950/40 dark:border-red-900/50"
+    : "bg-orange-50 border-orange-200 shadow-orange-100/50 dark:bg-orange-950/40 dark:border-orange-900/50";
 
-  const iconColor = isCritical ?
-  "text-red-500 dark:text-red-400" :
-  "text-orange-500 dark:text-orange-400";
+  const iconColor = isResolved
+    ? "text-green-500 dark:text-green-400"
+    : isCritical
+    ? "text-red-500 dark:text-red-400"
+    : "text-orange-500 dark:text-orange-400";
 
   return (
     <div
       className={`flex flex-wrap items-center justify-between p-4 rounded-2xl border-2 mb-3 cursor-pointer transition-all shadow-sm hover:shadow-md dark:shadow-none ${containerClasses}`}
       onClick={() => setIsExpanded(!isExpanded)}>
 
-      <AlertCircle className={`h-6 w-6 mr-4 shrink-0 ${iconColor}`} />
+      {isResolved ? (
+        <Check className={`h-6 w-6 mr-4 shrink-0 ${iconColor}`} />
+      ) : (
+        <AlertCircle className={`h-6 w-6 mr-4 shrink-0 ${iconColor}`} />
+      )}
 
       <div className="flex-1">
         <div className="flex items-center gap-2 flex-wrap">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">
-            {risk.title}
+          <h4 className={`font-semibold ${isResolved ? "text-green-800 dark:text-green-200" : "text-gray-900 dark:text-gray-100"}`}>
+            {risk.id && risk.id.startsWith("R") ? `${risk.id} — ` : ""}{risk.title}
           </h4>
           <Badge variant="outline" className={`text-[10px] px-1.5 py-0 font-bold ${sevInfo.className}`}>
             {sevInfo.label}
           </Badge>
+          {isResolved && (
+            <Badge className="bg-green-500/15 text-green-700 border-green-300 dark:text-green-300 dark:border-green-700 text-[10px] px-1.5 py-0 font-bold">
+              RESOLVED
+            </Badge>
+          )}
+          {isHighConfidence && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-blue-400 text-blue-600 dark:text-blue-400">
+              HIGH CONFIDENCE
+            </Badge>
+          )}
+          {risk.similarity !== undefined && (
+            <span className="text-[10px] font-mono text-muted-foreground">sim: {risk.similarity.toFixed(2)}</span>
+          )}
           {jiraTicket && (
             <a
               href={jiraTicket.url}
@@ -192,7 +214,7 @@ function RiskCard({
           )}
         </div>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Tap to view details
+          {isResolved ? "Issue resolved" : "Tap to view details"}
         </p>
       </div>
 
@@ -202,29 +224,36 @@ function RiskCard({
 
       {isExpanded &&
       <div className="w-full mt-4 pl-10">
-          <p className={`text-sm mb-2 ${isCritical ? "text-red-800 dark:text-red-200" : "text-orange-800 dark:text-orange-200"}`}>
+          <p className={`text-sm mb-2 ${isResolved ? "text-green-800 dark:text-green-200" : isCritical ? "text-red-800 dark:text-red-200" : "text-orange-800 dark:text-orange-200"}`}>
             {risk.description}
           </p>
+          {risk.fix && (
+            <p className="text-xs mb-2 text-muted-foreground">
+              <strong>Fix:</strong> {risk.fix}
+            </p>
+          )}
           <p className={`text-xs mb-3 ${isCritical ? "text-red-600/80 dark:text-red-400/80" : "text-orange-600/80 dark:text-orange-400/80"}`}>
             Section: {risk.section}
           </p>
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-3">
-              <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onFix(risk);
-              }}
-              disabled={risk.isFixing}
-              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors">
-                {risk.isFixing ?
-                <Loader2 className="h-4 w-4 animate-spin" /> :
-                <Sparkles className="h-4 w-4" />
-                }
-                {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
-              </button>
+              {!isResolved && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onFix(risk);
+                  }}
+                  disabled={risk.isFixing}
+                  className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 hover:underline disabled:opacity-50 transition-colors">
+                  {risk.isFixing ?
+                  <Loader2 className="h-4 w-4 animate-spin" /> :
+                  <Sparkles className="h-4 w-4" />
+                  }
+                  {risk.isFixing ? "Fixing issue..." : "FIX ISSUE"}
+                </button>
+              )}
 
-              {isHighConfidence && onCreateJira && !jiraTicket && (
+              {isHighConfidence && onCreateJira && !jiraTicket && !isResolved && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -258,14 +287,16 @@ function RiskCard({
               )}
             </div>
 
-            <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismiss(risk);
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Dismiss
-            </button>
+            {!isResolved && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDismiss(risk);
+                }}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Dismiss
+              </button>
+            )}
           </div>
         </div>
       }

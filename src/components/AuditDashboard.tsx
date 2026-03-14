@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import type { AuditResult, Risk } from "@/types/synaps";
+import type { AuditResult, Risk, SectionCoverage } from "@/types/synaps";
+import { Lock, Unlock } from "lucide-react";
 
 interface AuditDashboardProps {
   score: number;
@@ -17,11 +18,19 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
 
   const risks = auditResult?.risks || [];
   const criticalCount = risks.filter((r: Risk) => r.severity === "critical").length;
+  const highCount = risks.filter((r: Risk) => r.severity === "high").length;
   const moderateCount = risks.filter((r: Risk) => r.severity === "moderate").length;
-  const totalGaps = criticalCount + moderateCount;
+  const lowCount = risks.filter((r: Risk) => r.severity === "low").length;
+  const totalGaps = risks.length;
   const highConfidenceCount = risks.filter((r: Risk) => r.confidence === "high").length;
   const normalConfidenceCount = risks.filter((r: Risk) => r.confidence !== "high").length;
-  const resolvedCount = 0;
+  const resolvedCount = risks.filter((r: Risk) => r.resolved).length;
+
+  // Quality gate
+  const qualityGate = auditResult?.qualityGate;
+  const isGateLocked = qualityGate ? qualityGate.locked && score < qualityGate.threshold : false;
+  const gateThreshold = qualityGate?.threshold || 95;
+  const pointsBelow = Math.max(0, gateThreshold - score);
 
   useEffect(() => {
     let frame: number;
@@ -41,9 +50,6 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
     const t = setTimeout(() => setBarsVisible(true), 800);
     return () => clearTimeout(t);
   }, []);
-
-
-
 
   const radius = 90;
   const circumference = 2 * Math.PI * radius;
@@ -89,15 +95,12 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
       display: totalGaps > 0 ? `${resolvedCount}/${totalGaps}` : "—",
       badge: "Progress",
       colorClass: "audit-bar-teal",
-      emptyLabel: totalGaps > 0 ? "Fix issues to track progress" : undefined,
+      emptyLabel: totalGaps > 0 && resolvedCount === 0 ? "Fix issues to track progress" : undefined,
     },
   ];
 
-  const rawMeta = (() => {
-    try { return auditResult?.rawJson ? JSON.parse(auditResult.rawJson) : null; } catch { return null; }
-  })();
-  const techScore: number | null = rawMeta?.techScore ?? null;
-  const businessScore: number | null = rawMeta?.businessScore ?? null;
+  const techScore: number | null = auditResult?.techScore ?? null;
+  const businessScore: number | null = auditResult?.businessScore ?? null;
 
   return (
     <Tabs defaultValue="overview" className="w-full">
@@ -111,126 +114,178 @@ export default function AuditDashboard({ score, grade, auditResult, sectionsCoun
           techScore={techScore}
           businessScore={businessScore}
           risks={risks}
+          auditResult={auditResult}
         />
       </TabsContent>
 
       <TabsContent value="overview" className="mt-0">
-    <div className="space-y-4">
-      {/* Pill Counters */}
-      <div className="flex items-center justify-center gap-2">
-        <PillCounter label="Critical" value={criticalCount} colorClass="audit-pill-red" />
-        <PillCounter label="Moderate" value={moderateCount} colorClass="audit-pill-yellow" />
-        <PillCounter label="Sections" value={sectionsCount} colorClass="audit-pill-neutral" />
-      </div>
+        <div className="space-y-4">
+          {/* Quality Gate Banner */}
+          {qualityGate && (
+            <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm font-medium ${
+              isGateLocked
+                ? "border-destructive/30 bg-destructive/5 text-destructive"
+                : "border-success/30 bg-success/5 text-success"
+            }`}>
+              {isGateLocked ? (
+                <>
+                  <Lock className="h-4 w-4 shrink-0" />
+                  <span>QUALITY GATE: LOCKED 🔒 — {pointsBelow} points below threshold</span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="h-4 w-4 shrink-0" />
+                  <span>QUALITY GATE: UNLOCKED ✅</span>
+                </>
+              )}
+            </div>
+          )}
 
-      {/* Section A: Glowing Circular Ring */}
-      <div className="flex flex-col items-center">
-        <div className="relative w-[220px] h-[220px]">
-          <svg
-            width="220" height="220" viewBox="0 0 220 220"
-            className={`absolute inset-0 audit-ring-glow-rotate ${isLoading ? "audit-ring-loading" : ""}`}
-          >
-            <defs>
-              <linearGradient id="glow-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity="0.4" />
-                <stop offset="100%" stopColor="hsl(245, 58%, 51%)" stopOpacity="0.15" />
-              </linearGradient>
-              <linearGradient id="glow-gradient-dark" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(185, 96%, 55%)" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="hsl(270, 80%, 60%)" stopOpacity="0.2" />
-              </linearGradient>
-            </defs>
-            <circle
-              cx="110" cy="110" r={radius + 8}
-              fill="none"
-              className="stroke-[hsl(217,91%,60%)]/30 dark:stroke-[hsl(185,96%,55%)]/40"
-              strokeWidth="5"
-              style={{ filter: "blur(4px)" }}
-            />
-          </svg>
-
-          <svg width="220" height="220" viewBox="0 0 220 220" className="-rotate-90 relative z-10 audit-ring-svg">
-            <defs>
-              <linearGradient id="ring-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(217, 91%, 60%)" />
-                <stop offset="100%" stopColor="hsl(245, 58%, 51%)" />
-              </linearGradient>
-              <linearGradient id="ring-gradient-dark" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(185, 96%, 55%)" />
-                <stop offset="100%" stopColor="hsl(270, 80%, 60%)" />
-              </linearGradient>
-            </defs>
-            <circle cx="110" cy="110" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" opacity="0.3" />
-            <circle
-              cx="110" cy="110" r={radius} fill="none"
-              className="audit-ring-stroke"
-              strokeWidth="12"
-              strokeDasharray={circumference}
-              strokeDashoffset={offset}
-              strokeLinecap="round"
-              style={{ transition: "stroke-dashoffset 1.2s ease-out" }}
-            />
-          </svg>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
-            <span className="text-6xl font-bold text-foreground tabular-nums">{animatedScore}</span>
-            <span className="text-sm font-semibold text-muted-foreground">{grade}</span>
-            <span className="text-xs text-muted-foreground mt-1">Completeness Score</span>
+          {/* Pill Counters */}
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <PillCounter label="Critical" value={criticalCount} colorClass="audit-pill-red" />
+            <PillCounter label="High" value={highCount} colorClass="audit-pill-orange" />
+            <PillCounter label="Medium" value={moderateCount} colorClass="audit-pill-yellow" />
+            <PillCounter label="Low" value={lowCount} colorClass="audit-pill-blue" />
+            <PillCounter label="Sections" value={sectionsCount} colorClass="audit-pill-neutral" />
           </div>
-        </div>
-      </div>
 
-      {/* Section B: Five Metric Bar Rows */}
-      <div className="space-y-2">
-        {bars.map((bar, i) => (
-          <div
-            key={bar.label}
-            className="rounded-xl border border-border bg-card p-3 shadow-sm"
-            style={{ opacity: barsVisible ? 1 : 0, transform: barsVisible ? "translateY(0)" : "translateY(8px)", transition: `all 0.4s ease-out ${i * 100}ms` }}
-          >
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-sm font-medium text-foreground">{bar.label}</span>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-foreground tabular-nums">{bar.display}</span>
-                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{bar.badge}</Badge>
+          {/* Score Ring */}
+          <div className="flex flex-col items-center">
+            <div className="relative w-[220px] h-[220px]">
+              <svg
+                width="220" height="220" viewBox="0 0 220 220"
+                className={`absolute inset-0 audit-ring-glow-rotate ${isLoading ? "audit-ring-loading" : ""}`}
+              >
+                <defs>
+                  <linearGradient id="glow-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="hsl(217, 91%, 60%)" stopOpacity="0.4" />
+                    <stop offset="100%" stopColor="hsl(245, 58%, 51%)" stopOpacity="0.15" />
+                  </linearGradient>
+                  <linearGradient id="glow-gradient-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="hsl(185, 96%, 55%)" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="hsl(270, 80%, 60%)" stopOpacity="0.2" />
+                  </linearGradient>
+                </defs>
+                <circle
+                  cx="110" cy="110" r={radius + 8}
+                  fill="none"
+                  className="stroke-[hsl(217,91%,60%)]/30 dark:stroke-[hsl(185,96%,55%)]/40"
+                  strokeWidth="5"
+                  style={{ filter: "blur(4px)" }}
+                />
+              </svg>
+
+              <svg width="220" height="220" viewBox="0 0 220 220" className="-rotate-90 relative z-10 audit-ring-svg">
+                <defs>
+                  <linearGradient id="ring-gradient-light" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="hsl(217, 91%, 60%)" />
+                    <stop offset="100%" stopColor="hsl(245, 58%, 51%)" />
+                  </linearGradient>
+                  <linearGradient id="ring-gradient-dark" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="hsl(185, 96%, 55%)" />
+                    <stop offset="100%" stopColor="hsl(270, 80%, 60%)" />
+                  </linearGradient>
+                </defs>
+                <circle cx="110" cy="110" r={radius} fill="none" stroke="hsl(var(--muted))" strokeWidth="12" opacity="0.3" />
+                <circle
+                  cx="110" cy="110" r={radius} fill="none"
+                  className="audit-ring-stroke"
+                  strokeWidth="12"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={offset}
+                  strokeLinecap="round"
+                  style={{ transition: "stroke-dashoffset 1.2s ease-out" }}
+                />
+              </svg>
+
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-20">
+                <span className="text-6xl font-bold text-foreground tabular-nums">{animatedScore}</span>
+                <span className="text-sm font-semibold text-muted-foreground">{grade}</span>
+                <span className="text-xs text-muted-foreground mt-1">Completeness Score</span>
               </div>
             </div>
-            {bar.isSplit && bar.splitParts ? (
-              <div className="relative h-2 rounded-full bg-muted overflow-hidden flex">
-                <div
-                  className="audit-bar-purple audit-bar-shimmer rounded-l-full"
-                  style={{
-                    width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.high / confidenceTotal) * 100 : 0}%` : "0%",
-                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
-                  }}
-                />
-                <div
-                  className="bg-muted-foreground/30 rounded-r-full"
-                  style={{
-                    width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.normal / confidenceTotal) * 100 : 0}%` : "0%",
-                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="relative h-2 rounded-full bg-muted overflow-hidden">
-                <div
-                  className={`absolute inset-y-0 left-0 rounded-full ${bar.colorClass} audit-bar-shimmer`}
-                  style={{
-                    width: barsVisible ? `${bar.value * 100}%` : "0%",
-                    transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
-                  }}
-                />
-              </div>
-            )}
-            {bar.emptyLabel && bar.value === 0 && (
-              <p className="text-[10px] text-muted-foreground mt-1 italic">{bar.emptyLabel}</p>
-            )}
           </div>
-        ))}
-      </div>
 
-    </div>
+          {/* Metric Bars */}
+          <div className="space-y-2">
+            {bars.map((bar, i) => (
+              <div
+                key={bar.label}
+                className="rounded-xl border border-border bg-card p-3 shadow-sm"
+                style={{ opacity: barsVisible ? 1 : 0, transform: barsVisible ? "translateY(0)" : "translateY(8px)", transition: `all 0.4s ease-out ${i * 100}ms` }}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-foreground">{bar.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold text-foreground tabular-nums">{bar.display}</span>
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{bar.badge}</Badge>
+                  </div>
+                </div>
+                {bar.isSplit && bar.splitParts ? (
+                  <div className="relative h-2 rounded-full bg-muted overflow-hidden flex">
+                    <div
+                      className="audit-bar-purple audit-bar-shimmer rounded-l-full"
+                      style={{
+                        width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.high / confidenceTotal) * 100 : 0}%` : "0%",
+                        transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                      }}
+                    />
+                    <div
+                      className="bg-muted-foreground/30 rounded-r-full"
+                      style={{
+                        width: barsVisible ? `${confidenceTotal > 0 ? (bar.splitParts.normal / confidenceTotal) * 100 : 0}%` : "0%",
+                        transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="relative h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`absolute inset-y-0 left-0 rounded-full ${bar.colorClass} audit-bar-shimmer`}
+                      style={{
+                        width: barsVisible ? `${bar.value * 100}%` : "0%",
+                        transition: `width 0.8s ease-out ${i * 100 + 400}ms`,
+                      }}
+                    />
+                  </div>
+                )}
+                {bar.emptyLabel && bar.value === 0 && (
+                  <p className="text-[10px] text-muted-foreground mt-1 italic">{bar.emptyLabel}</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Section Coverage */}
+          {auditResult?.sectionCoverage && auditResult.sectionCoverage.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Section Coverage</p>
+              <div className="space-y-2">
+                {auditResult.sectionCoverage.map((sec) => (
+                  <div key={sec.name} className="flex items-center gap-2">
+                    <span className="flex-1 text-xs text-foreground truncate">{sec.name}</span>
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] px-1.5 py-0 shrink-0 ${
+                        sec.status === "MISSING"
+                          ? "border-destructive/40 text-destructive"
+                          : sec.status === "PARTIAL"
+                          ? "border-warning/40 text-warning"
+                          : "border-success/40 text-success"
+                      }`}
+                    >
+                      {sec.status}
+                    </Badge>
+                    <span className="text-xs font-mono tabular-nums text-muted-foreground w-8 text-right shrink-0">
+                      {sec.percent}%
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
       </TabsContent>
     </Tabs>
   );
@@ -249,12 +304,18 @@ function ModelsComparisonPanel({
   techScore,
   businessScore,
   risks,
+  auditResult,
 }: {
   techScore: number | null;
   businessScore: number | null;
   risks: Risk[];
+  auditResult: AuditResult | null;
 }) {
   const hasScores = techScore !== null && businessScore !== null;
+
+  // Use demo model names if available from auditResult
+  const auditorAName = auditResult?.techScore !== undefined ? "Gemini 3 Pro" : "Gemini 2.5 Pro";
+  const auditorBName = auditResult?.businessScore !== undefined ? "Claude Sonnet 4.6" : "Claude Sonnet 4.6";
 
   return (
     <div className="space-y-4">
@@ -263,7 +324,7 @@ function ModelsComparisonPanel({
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Auditor A</span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Gemini 2.5 Pro</Badge>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{auditorAName}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mb-3">Technical gaps — architecture, security, NFRs</p>
           <span className="text-4xl font-bold text-foreground tabular-nums">
@@ -274,7 +335,7 @@ function ModelsComparisonPanel({
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Auditor B</span>
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Claude Sonnet 4.6</Badge>
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{auditorBName}</Badge>
           </div>
           <p className="text-xs text-muted-foreground mb-3">Business gaps — KPIs, compliance, GTM</p>
           <span className="text-4xl font-bold text-foreground tabular-nums">
@@ -284,17 +345,30 @@ function ModelsComparisonPanel({
         </div>
       </div>
 
+      {/* Execution details */}
+      {hasScores && (
+        <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Execution Details</p>
+          <div className="space-y-1.5 text-xs text-muted-foreground">
+            <p>Both auditors ran in parallel via <code className="text-foreground bg-muted px-1 rounded">Promise.all()</code> — zero shared context</p>
+            <p>Embedding model: <code className="text-foreground bg-muted px-1 rounded">text-embedding-004</code> — dimension 768</p>
+            <p>Similarity threshold: <code className="text-foreground bg-muted px-1 rounded">0.82</code></p>
+            <p>Average score: <code className="text-foreground bg-muted px-1 rounded">{Math.round(((techScore || 0) + (businessScore || 0)) / 2)}/100</code></p>
+          </div>
+        </div>
+      )}
+
       {/* Per-gap similarity scores */}
       {risks.length > 0 && (
         <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Gap Cosine Similarity</p>
           <div className="space-y-2">
             {risks.map((risk) => {
-              const similarity = risk.confidence === "high" ? 0.87 : 0.50;
+              const similarity = risk.similarity ?? (risk.confidence === "high" ? 0.87 : 0.50);
               const isHigh = risk.confidence === "high";
               return (
                 <div key={risk.id} className="flex items-center gap-2">
-                  <span className="flex-1 text-xs text-foreground truncate" title={risk.title}>{risk.title}</span>
+                  <span className="flex-1 text-xs text-foreground truncate" title={risk.title}>{risk.id} — {risk.title}</span>
                   <Badge
                     variant="outline"
                     className={`text-[10px] px-1.5 py-0 shrink-0 ${isHigh ? "border-blue-400 text-blue-600 dark:text-blue-400" : "border-muted-foreground/40 text-muted-foreground"}`}

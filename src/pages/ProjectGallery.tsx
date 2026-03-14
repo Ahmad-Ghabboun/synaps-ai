@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Send, Copy, ChevronDown, ChevronUp } from "lucide-react";
-import { format } from "date-fns";
+import { Plus, MoreVertical, Pencil, Trash2, CalendarIcon, Send, Copy, ChevronDown, ChevronUp, Clock, CheckCircle2, AlertCircle } from "lucide-react";
+import { format, differenceInDays } from "date-fns";
 import { useApp } from "@/context/AppContext";
-import { Project, Persona } from "@/types/synaps";
+import { Project, Persona, DEMO_DEADLINES } from "@/types/synaps";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import DashboardSidebar from "@/components/DashboardSidebar";
@@ -39,6 +39,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 interface SyncNote {
   id: string;
@@ -51,6 +52,20 @@ function scoreColor(score: number) {
   if (score >= 60) return "bg-primary";
   if (score >= 40) return "bg-warning";
   return "bg-destructive";
+}
+
+function StatusBadge({ status }: { status?: string }) {
+  if (!status) return null;
+  const config: Record<string, string> = {
+    Active: "bg-primary/10 text-primary border-primary/30",
+    Pending: "bg-warning/10 text-warning border-warning/30",
+    Done: "bg-success/10 text-success border-success/30",
+  };
+  return (
+    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0 font-semibold", config[status] || "")}>
+      {status}
+    </Badge>
+  );
 }
 
 function ProjectCard({ project }: { project: Project }) {
@@ -76,6 +91,14 @@ function ProjectCard({ project }: { project: Project }) {
 
   const hasAudit = project.auditResult || project.score > 0;
   const editedDate = format(new Date(project.updatedAt), "MMM d, yyyy");
+
+  // Calculate relative time
+  const diffMs = Date.now() - new Date(project.updatedAt).getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDaysAgo = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const relativeTime = diffHours < 24
+    ? `${diffHours} hour${diffHours !== 1 ? "s" : ""} ago`
+    : `${diffDaysAgo} day${diffDaysAgo !== 1 ? "s" : ""} ago`;
 
   return (
     <article
@@ -111,7 +134,10 @@ function ProjectCard({ project }: { project: Project }) {
             autoFocus
           />
         ) : (
-          <h3 className="text-lg font-bold text-foreground truncate pr-2">{project.name}</h3>
+          <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+            <h3 className="text-lg font-bold text-foreground truncate">{project.name}</h3>
+            <StatusBadge status={project.status} />
+          </div>
         )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -142,16 +168,93 @@ function ProjectCard({ project }: { project: Project }) {
               style={{ width: `${project.score}%` }}
             />
           </div>
-          <p className="text-sm font-medium text-foreground">{project.score}% Complete</p>
+          <p className="text-sm font-medium text-foreground">{project.score}%</p>
         </>
       ) : (
         <p className="text-sm text-muted-foreground italic">Not yet audited</p>
       )}
 
-      <p className="text-xs text-muted-foreground mt-3">Edited {editedDate}</p>
+      <p className="text-xs text-muted-foreground mt-3">{relativeTime}</p>
     </article>
   );
 }
+
+// ─── Upcoming Deadlines ───
+
+function DeadlineIcon({ urgency }: { urgency: "critical" | "upcoming" | "done" }) {
+  if (urgency === "done") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+        <circle cx="8" cy="8" r="7" fill="hsl(var(--success))" fillOpacity="0.15" stroke="hsl(var(--success))" strokeWidth="1.5" />
+        <path d="M5 8.5L7 10.5L11 6" stroke="hsl(var(--success))" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (urgency === "critical") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0 deadline-icon-critical">
+        <circle cx="8" cy="8" r="7" fill="hsl(var(--destructive))" fillOpacity="0.15" stroke="hsl(var(--destructive))" strokeWidth="1.5" />
+        <circle cx="8" cy="8" r="3" fill="hsl(var(--destructive))" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="shrink-0">
+      <circle cx="8" cy="8" r="7" fill="hsl(var(--warning))" fillOpacity="0.15" stroke="hsl(var(--warning))" strokeWidth="1.5" />
+      <circle cx="8" cy="8" r="3" fill="hsl(var(--warning))" />
+    </svg>
+  );
+}
+
+function UpcomingDeadlines() {
+  const now = new Date();
+
+  return (
+    <div className="border border-border bg-card rounded-xl p-4 shadow-sm">
+      <h3 className="text-sm font-bold text-foreground mb-3 flex items-center gap-2">
+        <Clock className="h-4 w-4 text-muted-foreground" />
+        Upcoming Deadlines
+      </h3>
+      <div className="space-y-2.5">
+        {DEMO_DEADLINES.map((d) => {
+          if (d.done) {
+            return (
+              <div key={d.projectId} className="flex items-center gap-2.5">
+                <DeadlineIcon urgency="done" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-medium text-foreground truncate">{d.name}</p>
+                  <p className="text-[10px] text-success font-medium">Done ✓</p>
+                </div>
+              </div>
+            );
+          }
+
+          const deadlineDate = new Date(d.deadline!);
+          const daysRemaining = differenceInDays(deadlineDate, now);
+          const isCritical = daysRemaining <= 30;
+          const urgency = isCritical ? "critical" : "upcoming";
+
+          return (
+            <div key={d.projectId} className="flex items-center gap-2.5">
+              <DeadlineIcon urgency={urgency} />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{d.name}</p>
+                <p className={cn(
+                  "text-[10px] font-medium",
+                  isCritical ? "text-destructive" : "text-warning"
+                )}>
+                  {format(deadlineDate, "MMM d, yyyy")} · {daysRemaining} days remaining
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Notes Panel ───
 
 function NoteItem({
   note,
@@ -371,6 +474,13 @@ function MobileNotesPanel() {
         )}
       </div>
 
+      {/* Upcoming Deadlines */}
+      {state.demoMode && (
+        <div className="px-4 pb-3 shrink-0">
+          <UpcomingDeadlines />
+        </div>
+      )}
+
       <div className="p-4 border-t border-border shrink-0">
         <div className="relative w-full">
           <textarea
@@ -451,7 +561,6 @@ export default function ProjectGallery() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-
                 onClick={() => setModalOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
               >
                 <Plus className="h-4 w-4" /> New Project

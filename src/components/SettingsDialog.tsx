@@ -72,7 +72,7 @@ export default function SettingsDialog({ open, onOpenChange }: SettingsDialogPro
                 Demo mode is active
               </p>
             </div>
-            <Switch checked={state.demoMode} onCheckedChange={(v) => dispatch({ type: "SET_DEMO_MODE", enabled: v })} />
+            <Switch checked={true} disabled className="opacity-100 cursor-not-allowed" />
           </div>
 
           <div className="flex items-center justify-between">

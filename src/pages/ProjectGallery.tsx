@@ -575,7 +575,8 @@ export default function ProjectGallery() {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
-                onClick={() => setModalOpen(true)} className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition-colors"
+                onClick={() => state.demoMode ? toast.info("Available in full version") : setModalOpen(true)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${state.demoMode ? "bg-muted text-muted-foreground cursor-not-allowed" : "bg-primary text-primary-foreground hover:bg-primary/90"}`}
               >
                 <Plus className="h-4 w-4" /> New Project
               </button>

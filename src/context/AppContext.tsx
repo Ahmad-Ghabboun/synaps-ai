@@ -13,17 +13,7 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
-<<<<<<< ours
-  demoMode: (() => {
-    try {
-      return true;
-    } catch {
-      return false;
-    }
-  })(),
-=======
-  demoMode: true, // DEMO_MODE — locked on; toggling in settings has no effect
->>>>>>> theirs
+demoMode: true, // DEMO_MODE — locked on for demo day
   showRawJson: false,
 };
 

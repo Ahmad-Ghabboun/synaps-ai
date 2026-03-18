@@ -322,7 +322,15 @@ function NoteItem({
           />
           <div className="flex justify-end gap-2 shrink-0">
             <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)} className="h-7 text-xs px-2">Cancel</Button>
-            <Button size="sm" onClick={handleSave} className="h-7 text-xs px-2">Save</Button>
+            <Button
+              size="sm"
+              className="h-7 text-xs px-2 opacity-50 cursor-not-allowed"
+              disabled
+              title="Available in full version"
+            >
+              Save
+              <span className="ml-1 text-[9px] font-bold bg-amber-400 text-amber-900 rounded px-1 py-0 uppercase tracking-wide">Demo</span>
+            </Button>
           </div>
         </div>
       ) : (
@@ -490,9 +498,10 @@ function MobileNotesPanel() {
             className="w-full bg-muted rounded-lg p-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground outline-none resize-none min-h-[80px] scrollbar-hide"
           />
           <button
-            onClick={handleSaveNote}
-            disabled={isSaving || !newNote.trim()}
-            className="absolute bottom-3 right-3 p-1 text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+            onClick={() => toast.info("Available in full version")}
+            disabled={!newNote.trim()}
+            className="absolute bottom-3 right-3 p-1 text-muted-foreground opacity-40 cursor-not-allowed disabled:opacity-20 transition-colors"
+            title="Available in full version"
           >
             <Send className="h-4 w-4" />
           </button>
@@ -549,7 +558,12 @@ export default function ProjectGallery() {
 
       <main className="flex-1 px-8 py-8 min-w-0">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+            <span className="inline-flex items-center gap-1.5 bg-amber-400 text-amber-900 text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full shadow-sm select-none">
+              ⚡ DEMO MODE
+            </span>
+          </div>
           <a
             href="mailto:ahmadghabboun@outlook.com"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"

@@ -9,6 +9,9 @@ import Workspace from "./pages/Workspace";
 import NotFound from "./pages/NotFound";
 import MobileSync from "./pages/MobileSync";
 
+// Demo Mode — locks the app into a safe, non-destructive demo experience
+export const DEMO_MODE = true;
+
 const queryClient = new QueryClient();
 
 const App = () => (

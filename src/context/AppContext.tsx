@@ -13,6 +13,7 @@ const initialState: AppState = {
   projects: [],
   currentProjectId: null,
   isLoading: { architect: false, auditor: false, optimizer: false },
+<<<<<<< ours
   demoMode: (() => {
     try {
       return localStorage.getItem("synaps-demo-mode") === "true";
@@ -20,6 +21,9 @@ const initialState: AppState = {
       return false;
     }
   })(),
+=======
+  demoMode: true, // DEMO_MODE — locked on; toggling in settings has no effect
+>>>>>>> theirs
   showRawJson: false,
 };
 

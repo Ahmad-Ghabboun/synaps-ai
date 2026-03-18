@@ -16,7 +16,7 @@ const initialState: AppState = {
 <<<<<<< ours
   demoMode: (() => {
     try {
-      return localStorage.getItem("synaps-demo-mode") === "true";
+      return true;
     } catch {
       return false;
     }
